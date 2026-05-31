@@ -301,7 +301,7 @@ tr:hover td{background:#fafaf9}
       </div>
       <div class="nav-item" data-view="invoices" onclick="navigate('invoices')">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        Facturas
+        Facturas <span id="nav-overdue-badge" style="display:none;background:var(--red);color:#fff;font-size:.6rem;font-weight:700;padding:.1rem .35rem;border-radius:10px;margin-left:auto"></span>
       </div>
       <div class="nav-item" data-view="new-invoice" onclick="navigate('new-invoice')">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
@@ -378,7 +378,7 @@ let allOrgs = []; // only populated for global admin
 
 const DEFAULT_SETTINGS = {
   companyName: '', cif: '', address: '', city: '',
-  email: '', phone: '', iban: '', web: '', nextNumber: 1,
+  email: '', phone: '', iban: '', web: '', logo: '', invoicePrefix: 'FAC', nextNumber: 1,
   year: new Date().getFullYear()
 };
 
@@ -498,7 +498,7 @@ async function loadData() {
     DB.invoices = (ir.data || []).map(i => ({ id: i.id, number: i.number, clientId: i.client_id, date: i.date, dueDate: i.due_date, taxRate: i.tax_rate, irpfRate: i.irpf_rate, notes: i.notes||'', status: i.status, items: i.items || [] }));
     DB.expenses = (er.data || []).map(e => ({ id: e.id, date: e.date, category: e.category||'Otros', description: e.description||'', amount: parseFloat(e.amount)||0, notes: e.notes||'' }));
     if (sr.data) {
-      DB.settings = { companyName: sr.data.company_name||'', cif: sr.data.cif||'', address: sr.data.address||'', city: sr.data.city||'', email: sr.data.email||'', phone: sr.data.phone||'', iban: sr.data.iban||'', web: sr.data.web||'', nextNumber: sr.data.next_number||1, year: sr.data.year||new Date().getFullYear() };
+      DB.settings = { companyName: sr.data.company_name||'', cif: sr.data.cif||'', address: sr.data.address||'', city: sr.data.city||'', email: sr.data.email||'', phone: sr.data.phone||'', iban: sr.data.iban||'', web: sr.data.web||'', logo: sr.data.logo||'', invoicePrefix: sr.data.invoice_prefix||'FAC', nextNumber: sr.data.next_number||1, year: sr.data.year||new Date().getFullYear() };
     }
   } catch(e) {
     console.error('Error cargando datos:', e);
@@ -551,7 +551,7 @@ async function persistDeleteExpense(id) {
 async function persistSettings(s) {
   if (demoMode || IS_DEMO) { saveDemo(); return; }
   try {
-    const row = { user_id: currentUser.id, company_name: s.companyName, cif: s.cif, address: s.address, city: s.city, email: s.email, phone: s.phone, iban: s.iban, web: s.web, next_number: s.nextNumber, year: s.year, organization_id: currentOrgId };
+    const row = { user_id: currentUser.id, company_name: s.companyName, cif: s.cif, address: s.address, city: s.city, email: s.email, phone: s.phone, iban: s.iban, web: s.web, logo: s.logo||'', invoice_prefix: s.invoicePrefix||'FAC', next_number: s.nextNumber, year: s.year, organization_id: currentOrgId };
     await sb.from('settings').upsert(row, { onConflict: 'user_id' });
   } catch(e) { toast('Error al guardar configuración.', 'error'); }
 }
@@ -560,7 +560,7 @@ async function persistSettings(s) {
 // HELPERS
 // ════════════════════════════════════════════════════════════
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
-function invoiceNumber() { return `FAC-${DB.settings.year}-${String(DB.settings.nextNumber).padStart(3,'0')}`; }
+function invoiceNumber() { const p=DB.settings.invoicePrefix||'FAC'; return `${p}-${DB.settings.year}-${String(DB.settings.nextNumber).padStart(3,'0')}`; }
 function fmtMoney(v) { return (parseFloat(v)||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
 function fmtDate(iso) { if(!iso)return'—'; return new Date(iso+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}); }
 function today() { return new Date().toISOString().slice(0,10); }
@@ -624,6 +624,7 @@ function viewDashboard() {
   const totalGastos=DB.expenses.reduce((s,e)=>s+e.amount,0);
   const resultado=cobradas-totalGastos;
   return`
+  <div id="overdue-alert" class="alert" style="display:none;background:var(--red-bg);border:1px solid var(--red-border);color:var(--red);margin-bottom:1rem;cursor:default"></div>
   <div class="stat-grid">
     <div class="stat-card" style="border-left:3px solid var(--accent)">
       <div class="stat-label">Facturado este mes</div>
@@ -670,8 +671,25 @@ function viewDashboard() {
     :`<div class="empty"><div class="empty-title">Sin facturas todavía</div><div class="empty-sub">Crea tu primera factura para empezar.</div></div>`}
   </div>`;
 }
+function checkOverdueAlert() {
+  const overdue = DB.invoices.filter(i=>getStatus(i)==='overdue');
+  const el = document.getElementById('overdue-alert');
+  if(!el) return;
+  if(overdue.length > 0) {
+    const total = overdue.reduce((s,i)=>s+calcTotals(i.items,i.taxRate,i.irpfRate).total,0);
+    el.innerHTML = `⚠ Tienes <strong>${overdue.length} factura${overdue.length>1?'s':''} vencida${overdue.length>1?'s':''}</strong> sin cobrar por un total de <strong>${fmtMoney(total)}</strong>. <a onclick="navigate('invoices',{filter:'overdue'})" style="font-weight:700;cursor:pointer;text-decoration:underline">Ver facturas vencidas →</a>`;
+    el.style.display = 'block';
+  const badge = document.getElementById('nav-overdue-badge');
+  if(badge) { if(overdue.length>0){badge.textContent=overdue.length;badge.style.display='inline';}else{badge.style.display='none';} }
+  } else {
+    el.style.display = 'none';
+    const badge = document.getElementById('nav-overdue-badge');
+    if(badge) badge.style.display='none';
+  }
+}
 function actDashboard(){
   document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-primary btn-sm" onclick="navigate('new-invoice')">+ Nueva factura</button>`;
+  checkOverdueAlert();
   setTimeout(()=>{
     const months=[];const mLabels=[];
     for(let i=5;i>=0;i--){const d=new Date();d.setMonth(d.getMonth()-i);months.push(d.toISOString().slice(0,7));mLabels.push(d.toLocaleString('es-ES',{month:'short',year:'2-digit'}));}
@@ -725,7 +743,11 @@ function viewInvoices(p={}) {
     :`<div class="empty"><div class="empty-title">Sin resultados</div><div class="empty-sub">Prueba con otro filtro.</div></div>`}
   </div>`;
 }
-function actInvoices(){document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-primary btn-sm" onclick="navigate('new-invoice')">+ Nueva factura</button>`;}
+function actInvoices(){document.getElementById('topbar-actions').innerHTML=`
+  <button class="btn btn-ghost btn-sm" onclick="exportInvoicesCSV()">↓ Exportar CSV</button>
+  <button class="btn btn-ghost btn-sm" onclick="exportResumenPDF()">↓ Resumen PDF</button>
+  <button class="btn btn-primary btn-sm" onclick="navigate('new-invoice')">+ Nueva factura</button>
+`;}
 
 async function markPaid(id) {
   const inv=getInvoice(id); if(!inv)return;
@@ -969,9 +991,11 @@ function closeModal(){document.getElementById('modal-container').innerHTML='';}
 function viewSettings(){
   const s=DB.settings;
   const isDemoMode=demoMode||IS_DEMO;
+  const pfx=s.invoicePrefix||'FAC';
+  const preview=`${pfx}-${s.year}-${String(s.nextNumber).padStart(3,'0')}`;
   return`
-  ${isDemoMode?`<div class="alert alert-warn" style="max-width:800px">⚠ Estás en modo demo. Los datos se guardan solo en este navegador. <a href="#" style="font-weight:600" onclick="event.preventDefault()">Configura Supabase para datos en la nube →</a></div>`:''}
-  <div class="settings-grid">
+  ${isDemoMode?`<div class="alert alert-warn" style="max-width:900px">⚠ Estás en modo demo. Los datos se guardan solo en este navegador.</div>`:''}
+  <div class="settings-grid" style="max-width:900px">
     <div class="settings-card" style="grid-column:1/-1">
       <div class="settings-card-title">Datos de tu empresa / autónomo</div>
       <div class="form-grid">
@@ -986,25 +1010,64 @@ function viewSettings(){
         </div>
         <div class="form-row">
           <div class="form-group"><label class="form-label">Teléfono</label><input class="form-input" id="s-phone" value="${s.phone}"/></div>
-          <div class="form-group"><label class="form-label">Web / Portfolio</label><input class="form-input" id="s-web" value="${s.web||''}"/></div>
+          <div class="form-group"><label class="form-label">Web</label><input class="form-input" id="s-web" value="${s.web||''}"/></div>
         </div>
         <div class="form-group"><label class="form-label">IBAN (datos bancarios)</label><input class="form-input" id="s-iban" value="${s.iban}" placeholder="ES00 0000 0000 0000 0000 0000"/></div>
       </div>
     </div>
     <div class="settings-card">
-      <div class="settings-card-title">Numeración</div>
+      <div class="settings-card-title">Logo de empresa</div>
+      ${s.logo?`<div style="margin-bottom:.875rem"><img src="${s.logo}" style="max-height:60px;max-width:180px;border:1px solid var(--border);border-radius:4px;padding:6px;background:#fff"/></div>`:'<div class="text-muted text-sm" style="margin-bottom:.875rem">Sin logo — aparecerá en tus facturas PDF.</div>'}
+      <label style="display:inline-block;cursor:pointer">
+        <input type="file" id="s-logo-file" accept="image/*" style="display:none" onchange="previewLogo(this)"/>
+        <span class="btn btn-ghost btn-sm">📎 Subir logo</span>
+      </label>
+      ${s.logo?`<button class="btn btn-ghost btn-sm" style="margin-left:.5rem;color:var(--red)" onclick="removeLogo()">× Quitar</button>`:''}
+      <canvas id="logo-canvas" style="display:none"></canvas>
+    </div>
+    <div class="settings-card">
+      <div class="settings-card-title">Numeración de facturas</div>
+      <div class="form-group" style="margin-bottom:.875rem">
+        <label class="form-label">Prefijo (serie)</label>
+        <input class="form-input" id="s-prefix" value="${pfx}" placeholder="FAC" style="width:100px"/>
+      </div>
       <div class="form-group" style="margin-bottom:.875rem"><label class="form-label">Próximo número</label><input class="form-input" id="s-next" type="number" min="1" value="${s.nextNumber}"/></div>
       <div class="form-group"><label class="form-label">Año</label><input class="form-input" id="s-year" type="number" value="${s.year}"/></div>
-      <div class="text-muted text-sm mt-1" style="margin-top:.75rem">Próxima: <strong style="font-family:var(--mono)">FAC-${s.year}-${String(s.nextNumber).padStart(3,'0')}</strong></div>
+      <div class="text-muted text-sm" style="margin-top:.75rem">Próxima: <strong style="font-family:var(--mono)">${preview}</strong></div>
     </div>
-    <div class="settings-card" style="display:flex;align-items:flex-end">
-      <div style="width:100%">
-        <button class="btn btn-primary" style="width:100%" onclick="saveSettings()">Guardar configuración</button>
-      </div>
+    <div class="settings-card" style="grid-column:1/-1">
+      <button class="btn btn-primary" onclick="saveSettings()">Guardar configuración</button>
     </div>
   </div>`;
 }
 function actSettings(){document.getElementById('topbar-actions').innerHTML='';}
+
+function previewLogo(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.getElementById('logo-canvas');
+      const MAX = 300;
+      const ratio = Math.min(MAX/img.width, MAX/img.height, 1);
+      canvas.width = img.width * ratio;
+      canvas.height = img.height * ratio;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      DB.settings.logo = canvas.toDataURL('image/png', 0.85);
+      render();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeLogo() {
+  DB.settings.logo = '';
+  render();
+}
+
 async function saveSettings(){
   DB.settings.companyName=document.getElementById('s-name')?.value.trim()||DB.settings.companyName;
   DB.settings.cif=document.getElementById('s-cif')?.value.trim()||'';
@@ -1014,10 +1077,12 @@ async function saveSettings(){
   DB.settings.phone=document.getElementById('s-phone')?.value.trim()||'';
   DB.settings.web=document.getElementById('s-web')?.value.trim()||'';
   DB.settings.iban=document.getElementById('s-iban')?.value.trim()||'';
+  DB.settings.invoicePrefix=document.getElementById('s-prefix')?.value.trim()||'FAC';
   DB.settings.nextNumber=parseInt(document.getElementById('s-next')?.value)||DB.settings.nextNumber;
   DB.settings.year=parseInt(document.getElementById('s-year')?.value)||DB.settings.year;
   await persistSettings(DB.settings);
   toast('Configuración guardada.','success');
+  render();
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1035,6 +1100,8 @@ function generateInvoicePDF(invId) {
   let y=0;
   doc.setFillColor(...BG);doc.rect(0,0,W,52,'F');
   doc.setDrawColor(...BORDER);doc.setLineWidth(0.3);doc.line(0,52,W,52);
+  // Logo en PDF
+  if(s.logo){try{const lh=18,lw=lh*(4/3);doc.addImage(s.logo,'PNG',ml,8,lw,lh);}catch(e){}}
   doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(...DARK);
   doc.text(s.companyName||'Mi Empresa',ml,18);
   doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...MUTED);
@@ -1118,6 +1185,143 @@ function generateInvoicePDF(invId) {
 }
 
 // ════════════════════════════════════════════════════════════
+// EXPORT
+// ════════════════════════════════════════════════════════════
+function exportInvoicesCSV() {
+  const rows = [['Número','Cliente','Fecha','Vencimiento','Estado','Base','IVA','IRPF','Total']];
+  DB.invoices.forEach(inv => {
+    const cl = getClient(inv.clientId);
+    const t = calcTotals(inv.items, inv.taxRate, inv.irpfRate);
+    rows.push([inv.number, cl?cl.name:'—', inv.date||'', inv.dueDate||'', getStatus(inv),
+      t.base.toFixed(2), t.tax.toFixed(2), t.irpf.toFixed(2), t.total.toFixed(2)]);
+  });
+  downloadCSV(rows, `facturas_${DB.settings.year||new Date().getFullYear()}.csv`);
+}
+
+function exportExpensesCSV() {
+  const rows = [['Fecha','Categoría','Descripción','Importe','Notas']];
+  DB.expenses.forEach(e => {
+    rows.push([e.date||'', e.category||'', e.description||'', e.amount.toFixed(2), e.notes||'']);
+  });
+  downloadCSV(rows, `gastos_${new Date().getFullYear()}.csv`);
+}
+
+function downloadCSV(rows, filename) {
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  toast('Exportado correctamente.', 'success');
+}
+
+function exportResumenPDF() {
+  const {jsPDF} = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+  const W=210, ml=18, mr=18, cw=W-ml-mr;
+  const DARK=[28,25,23], MUTED=[120,113,108], ACCENT=[180,83,9], GREEN=[21,128,61], RED=[185,28,28], BG=[250,250,249];
+  const year = DB.settings.year || new Date().getFullYear();
+  const company = DB.settings.companyName || 'Mi Empresa';
+
+  // Header
+  doc.setFillColor(...BG); doc.rect(0,0,W,30,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(...DARK);
+  doc.text(company, ml, 14);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...MUTED);
+  doc.text(`Resumen anual ${year}`, ml, 21);
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...ACCENT);
+  doc.text('INVOIX', W-mr, 14, {align:'right'});
+  doc.setDrawColor(231,229,228); doc.setLineWidth(0.3); doc.line(0,30,W,30);
+
+  let y = 40;
+  // Summary cards
+  const totalIngresos = DB.invoices.filter(i=>i.status==='paid').reduce((s,i)=>s+calcTotals(i.items,i.taxRate,i.irpfRate).total,0);
+  const totalGastos = DB.expenses.reduce((s,e)=>s+e.amount,0);
+  const resultado = totalIngresos - totalGastos;
+  const pendiente = pendingTotal();
+
+  const cards = [
+    ['Ingresos cobrados', fmtMoney(totalIngresos), ACCENT],
+    ['Gastos totales', fmtMoney(totalGastos), RED],
+    ['Resultado neto', fmtMoney(resultado), resultado>=0?GREEN:RED],
+    ['Pendiente de cobro', fmtMoney(pendiente), MUTED],
+  ];
+  const cardW = (cw-9)/4;
+  cards.forEach((c,i)=>{
+    const x = ml + i*(cardW+3);
+    doc.setFillColor(250,250,249); doc.setDrawColor(231,229,228); doc.setLineWidth(0.3);
+    doc.roundedRect(x, y, cardW, 22, 1, 1, 'FD');
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(...MUTED);
+    doc.text(c[0], x+4, y+7);
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...c[2]);
+    doc.text(c[1], x+4, y+17);
+  });
+  y += 30;
+
+  // Invoices table
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DARK);
+  doc.text('Facturas emitidas', ml, y); y+=5;
+  doc.setFillColor(...DARK); doc.rect(ml, y, cw, 7, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(255,255,255);
+  doc.text('Nº Factura', ml+2, y+5);
+  doc.text('Cliente', ml+30, y+5);
+  doc.text('Fecha', ml+90, y+5);
+  doc.text('Estado', ml+115, y+5);
+  doc.text('Total', ml+cw-2, y+5, {align:'right'});
+  y+=7;
+  const invsSorted = [...DB.invoices].sort((a,b)=>a.date>b.date?1:-1);
+  invsSorted.forEach((inv,idx)=>{
+    if(y>260){doc.addPage();y=20;}
+    const cl = getClient(inv.clientId);
+    const t = calcTotals(inv.items,inv.taxRate,inv.irpfRate);
+    const st = getStatus(inv);
+    doc.setFillColor(...(idx%2===0?[255,255,255]:BG)); doc.rect(ml,y,cw,6,'F');
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...DARK);
+    doc.text(inv.number, ml+2, y+4.5);
+    doc.text((cl?cl.name:'—').slice(0,28), ml+30, y+4.5);
+    doc.text(inv.date||'—', ml+90, y+4.5);
+    const stColors={paid:GREEN,pending:ACCENT,overdue:RED,draft:MUTED};
+    const stLabels={paid:'Cobrada',pending:'Pendiente',overdue:'Vencida',draft:'Borrador'};
+    doc.setTextColor(...(stColors[st]||MUTED)); doc.text(stLabels[st]||st, ml+115, y+4.5);
+    doc.setTextColor(...DARK); doc.setFont('helvetica','bold');
+    doc.text(fmtMoney(t.total), ml+cw-2, y+4.5, {align:'right'});
+    y+=6;
+  });
+
+  // Expenses table
+  if(DB.expenses.length > 0){
+    y+=8;
+    if(y>250){doc.addPage();y=20;}
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DARK);
+    doc.text('Gastos registrados', ml, y); y+=5;
+    doc.setFillColor(...DARK); doc.rect(ml, y, cw, 7, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(255,255,255);
+    doc.text('Fecha', ml+2, y+5); doc.text('Categoría', ml+25, y+5);
+    doc.text('Descripción', ml+65, y+5); doc.text('Importe', ml+cw-2, y+5, {align:'right'});
+    y+=7;
+    const expsSorted=[...DB.expenses].sort((a,b)=>a.date>b.date?1:-1);
+    expsSorted.forEach((e,idx)=>{
+      if(y>265){doc.addPage();y=20;}
+      doc.setFillColor(...(idx%2===0?[255,255,255]:BG)); doc.rect(ml,y,cw,6,'F');
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...DARK);
+      doc.text(e.date||'—', ml+2, y+4.5);
+      doc.text(e.category||'—', ml+25, y+4.5);
+      doc.text((e.description||'—').slice(0,38), ml+65, y+4.5);
+      doc.setFont('helvetica','bold'); doc.setTextColor(...RED);
+      doc.text(fmtMoney(e.amount), ml+cw-2, y+4.5, {align:'right'});
+      y+=6;
+    });
+  }
+
+  // Footer
+  doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(...MUTED);
+  doc.text(`Generado por INVOIX · ${new Date().toLocaleDateString('es-ES')}`, W/2, 290, {align:'center'});
+  doc.save(`resumen_${year}_${company.replace(/\s+/g,'_')}.pdf`);
+  toast('Resumen PDF exportado.', 'success');
+}
+
+// ════════════════════════════════════════════════════════════
 // EXPENSES
 // ════════════════════════════════════════════════════════════
 function viewExpenses() {
@@ -1144,7 +1348,10 @@ function viewExpenses() {
   </div>`;
 }
 function actExpenses(){
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-primary btn-sm" onclick="openExpenseModal()">+ Nuevo gasto</button>`;
+  document.getElementById('topbar-actions').innerHTML=`
+    <button class="btn btn-ghost btn-sm" onclick="exportExpensesCSV()">↓ Exportar CSV</button>
+    <button class="btn btn-primary btn-sm" onclick="openExpenseModal()">+ Nuevo gasto</button>
+  `;
 }
 
 function openExpenseModal(id) {
