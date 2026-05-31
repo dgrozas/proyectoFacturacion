@@ -1327,34 +1327,75 @@ function showApp() {
 }
 
 async function init() {
-  if (IS_DEMO) {
-    const saved = localStorage.getItem('invoix_demo');
-    if (saved) { try { DB = JSON.parse(saved); } catch(e) {} }
-    demoMode = true;
-    document.getElementById('sidebar-user-email').textContent = 'Modo demo (local)';
-    showApp();
-    return;
-  }
-  sb.auth.onAuthStateChange(async (event, session) => {
-    if (session?.user) {
-      currentUser = session.user;
-      document.getElementById('sidebar-user-email').textContent = currentUser.email;
-      document.getElementById('loading-overlay').classList.remove('hidden');
-      document.getElementById('login-screen').classList.add('hidden');
-      await checkUserSetup();
-    } else if (event === 'SIGNED_OUT' || !session) {
-      document.getElementById('loading-overlay').classList.add('hidden');
-      document.getElementById('app-shell').classList.add('hidden');
-      document.getElementById('login-screen').classList.remove('hidden');
-    }
-  });
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) {
+  // Failsafe: never stay loading more than 8 seconds
+  const failsafe = setTimeout(() => {
+    console.warn('INVOIX: timeout — showing login');
     document.getElementById('loading-overlay').classList.add('hidden');
     document.getElementById('login-screen').classList.remove('hidden');
+  }, 8000);
+
+  function clearFailsafe() { clearTimeout(failsafe); }
+
+  try {
+    if (IS_DEMO) {
+      const saved = localStorage.getItem('invoix_demo');
+      if (saved) { try { DB = JSON.parse(saved); } catch(e) {} }
+      demoMode = true;
+      document.getElementById('sidebar-user-email').textContent = 'Modo demo (local)';
+      clearFailsafe();
+      showApp();
+      return;
+    }
+
+    // Check if Supabase client initialized correctly
+    if (!sb) {
+      console.error('Supabase client not initialized');
+      clearFailsafe();
+      document.getElementById('loading-overlay').classList.add('hidden');
+      document.getElementById('login-screen').classList.remove('hidden');
+      return;
+    }
+
+    sb.auth.onAuthStateChange(async (event, session) => {
+      try {
+        if (session?.user) {
+          currentUser = session.user;
+          document.getElementById('sidebar-user-email').textContent = currentUser.email;
+          document.getElementById('loading-overlay').classList.remove('hidden');
+          document.getElementById('login-screen').classList.add('hidden');
+          await checkUserSetup();
+          clearFailsafe();
+        } else if (event === 'SIGNED_OUT' || !session) {
+          clearFailsafe();
+          document.getElementById('loading-overlay').classList.add('hidden');
+          document.getElementById('app-shell').classList.add('hidden');
+          document.getElementById('login-screen').classList.remove('hidden');
+        }
+      } catch(e) {
+        console.error('Auth state change error:', e);
+        clearFailsafe();
+        document.getElementById('loading-overlay').classList.add('hidden');
+        document.getElementById('login-screen').classList.remove('hidden');
+      }
+    });
+
+    const { data: { session }, error } = await sb.auth.getSession();
+    if (error) throw error;
+    if (!session) {
+      clearFailsafe();
+      document.getElementById('loading-overlay').classList.add('hidden');
+      document.getElementById('login-screen').classList.remove('hidden');
+    }
+    // If session exists, onAuthStateChange handles it
+
+  } catch(e) {
+    console.error('Init error:', e);
+    clearFailsafe();
+    document.getElementById('loading-overlay').classList.add('hidden');
+    document.getElementById('login-screen').classList.remove('hidden');
+    showAuthError('Error de conexión. Comprueba tu red e inténtalo de nuevo.');
   }
 }
-
 init();
 </script>
 </body>
