@@ -1249,13 +1249,11 @@ async function checkUserSetup() {
   const done = () => clearTimeout(timeout);
 
   try {
-    console.log('1. Comprobando admin global...');
-    const {data: adminData, error: adminErr} = await sb.from('global_admins')
-      .select('user_id').eq('user_id', currentUser.id).maybeSingle();
+    console.log('1. Comprobando admin global (via RPC)...');
+    const {data: adminData, error: adminErr} = await sb.rpc('is_global_admin');
 
     if (adminErr) {
-      console.error('Error global_admins:', adminErr.message);
-      // Si la tabla no existe o hay error, intentar continuar sin admin
+      console.error('Error is_global_admin RPC:', adminErr.message);
     }
 
     isGlobalAdmin = !!adminData;
