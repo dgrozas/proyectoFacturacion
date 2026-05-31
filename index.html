@@ -1256,8 +1256,7 @@ async function checkUserSetup() {
 
     if (isGlobalAdmin) {
       console.log('3. Cargando organizaciones...');
-      const {data: orgs, error: orgsErr} = await sb.from('organizations')
-        .select('*').order('created_at', {ascending: false});
+      const {data: orgs, error: orgsErr} = await sb.rpc('get_all_orgs_for_admin');
 
       if (orgsErr) console.error('Error orgs:', orgsErr.message);
       allOrgs = orgs || [];
