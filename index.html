@@ -1041,17 +1041,43 @@ function generateInvoicePDF(invId) {
 // ════════════════════════════════════════════════════════════
 // ADMIN PANEL
 // ════════════════════════════════════════════════════════════
+let adminOrgsLoaded = false;
+
 async function loadAdminOrgs() {
   try {
     const {data, error} = await sb.rpc('get_all_orgs_for_admin');
     if (error) throw error;
     allOrgs = data || [];
-    render();
+    // Actualizar solo la lista, sin re-renderizar el formulario
+    const listEl = document.getElementById('admin-orgs-list');
+    if (listEl) {
+      if (allOrgs.length === 0) {
+        listEl.innerHTML = `<div class="empty"><div class="empty-title">Sin empresas todavía</div><div class="empty-sub">Crea la primera empresa con el formulario →</div></div>`;
+      } else {
+        const rows = allOrgs.map(org => `
+          <div class="org-card ${org.id===currentOrgId?'org-card-active':''}">
+            <div>
+              <div class="org-card-name">${org.name}</div>
+              <div class="org-card-meta">Plan: <strong>${org.plan||'free'}</strong> · Alta: ${org.created_at?new Date(org.created_at).toLocaleDateString('es-ES'):'—'}</div>
+            </div>
+            <div style="display:flex;gap:.5rem;align-items:center">
+              ${org.id!==currentOrgId
+                ?`<button class="btn btn-ghost btn-sm" onclick="switchAdminToOrg('${org.id}','${org.name.replace(/'/g,"\\'").replace(/"/g,'\\"')}')">👁 Ver como</button>`
+                :`<span class="badge badge-paid">Viendo ahora</span> <button class="btn btn-primary btn-sm" onclick="navigate('dashboard')">Ir al dashboard →</button>`
+              }
+              <button class="btn btn-danger btn-sm" onclick="deleteOrg('${org.id}','${org.name.replace(/'/g,"\\'")}')">×</button>
+            </div>
+          </div>`).join('');
+        listEl.innerHTML = `<div style="padding:.75rem">${rows}</div>`;
+      }
+      const titleEl = document.getElementById('admin-orgs-count');
+      if (titleEl) titleEl.textContent = `Empresas activas (${allOrgs.length})`;
+    }
   } catch(e) { toast('Error al cargar empresas: ' + e.message, 'error'); }
 }
 
 function viewAdmin() {
-  if (allOrgs.length === 0 && isGlobalAdmin) loadAdminOrgs();
+  if (!adminOrgsLoaded && isGlobalAdmin) { adminOrgsLoaded = true; loadAdminOrgs(); }
   const viewing = currentOrgId ? allOrgs.find(o=>o.id===currentOrgId) : null;
   const orgRows = allOrgs.map(org => `
     <div class="org-card ${org.id===currentOrgId?'org-card-active':''}">
@@ -1079,13 +1105,15 @@ function viewAdmin() {
     <!-- Lista de empresas -->
     <div class="table-card">
       <div class="table-header">
-        <span class="table-title">Empresas activas (${allOrgs.length})</span>
+        <span class="table-title" id="admin-orgs-count">Empresas activas (${allOrgs.length})</span>
         <button class="btn btn-ghost btn-sm" onclick="refreshAdminOrgs()">↻ Actualizar</button>
       </div>
+      <div id="admin-orgs-list">
       ${allOrgs.length === 0
-        ? `<div class="empty"><div class="empty-title">Sin empresas todavía</div><div class="empty-sub">Crea la primera empresa con el formulario →</div></div>`
+        ? `<div class="empty"><div class="empty-title">Cargando...</div><div class="empty-sub"></div></div>`
         : `<div style="padding:.75rem">${orgRows}</div>`
       }
+      </div>
     </div>
 
     <!-- Formulario nueva empresa -->
@@ -1216,13 +1244,9 @@ async function deleteOrg(orgId, orgName) {
 }
 
 async function refreshAdminOrgs() {
-  try {
-    const {data, error} = await sb.rpc('get_all_orgs_for_admin');
-    if (error) throw error;
-    allOrgs = data || [];
-    render();
-    toast('Lista actualizada.', 'success');
-  } catch(e) { toast('Error al cargar organizaciones.', 'error'); }
+  adminOrgsLoaded = false;
+  await loadAdminOrgs();
+  toast('Lista actualizada.', 'success');
 }
 
 async function switchAdminToOrg(orgId, orgName) {
