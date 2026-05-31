@@ -1297,42 +1297,33 @@ async function checkUserSetup() {
       done(); showApp(); return;
     }
 
-    console.log('3. Comprobando membresías...');
-    const {data: memberships, error: memErr} = await sb.from('memberships')
-      .select('organization_id, role, organizations(id, name)')
-      .eq('user_id', currentUser.id);
+    console.log('3. Comprobando membresías (via RPC)...');
+    const {data: memberships, error: memErr} = await sb.rpc('get_my_memberships');
 
-    if (memErr) console.error('Error memberships:', memErr.message);
+    if (memErr) console.error('Error get_my_memberships:', memErr.message);
     console.log('4. Membresías encontradas:', memberships?.length || 0);
 
     if (memberships && memberships.length > 0) {
       const mem = memberships[0];
       currentOrgId = mem.organization_id;
-      currentOrgName = mem.organizations?.name || '';
+      currentOrgName = mem.org_name || '';
       userRole = mem.role;
       await loadData();
       updateSidebarOrg();
       done(); showApp(); return;
     }
 
-    console.log('5. Comprobando invitación pendiente...');
-    const userEmail = currentUser.email;
-    const {data: invite, error: invErr} = await sb.from('pending_invites')
-      .select('organization_id, role, organizations(id, name)')
-      .eq('email', userEmail).maybeSingle();
+    console.log('5. Comprobando invitación pendiente (via RPC)...');
+    const {data: invites, error: invErr} = await sb.rpc('get_my_pending_invite');
 
-    if (invErr) console.error('Error pending_invites:', invErr.message);
+    if (invErr) console.error('Error get_my_pending_invite:', invErr.message);
+    const invite = invites && invites.length > 0 ? invites[0] : null;
     console.log('6. Invitación pendiente:', !!invite);
 
     if (invite) {
-      await sb.from('memberships').insert({
-        organization_id: invite.organization_id,
-        user_id: currentUser.id,
-        role: invite.role || 'owner'
-      });
-      await sb.from('pending_invites').delete().eq('email', userEmail);
+      await sb.rpc('accept_my_invite');
       currentOrgId = invite.organization_id;
-      currentOrgName = invite.organizations?.name || '';
+      currentOrgName = invite.org_name || '';
       userRole = invite.role || 'owner';
       await loadData();
       updateSidebarOrg();
