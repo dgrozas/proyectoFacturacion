@@ -1239,23 +1239,50 @@ async function switchAdminToOrg(orgId, orgName) {
 // ════════════════════════════════════════════════════════════
 async function checkUserSetup() {
   if (IS_DEMO || demoMode) { showApp(); return; }
+
+  // Timeout de seguridad: si algo cuelga, mostrar login
+  const timeout = setTimeout(() => {
+    console.error('checkUserSetup timeout — mostrando login');
+    showNoAccessScreen();
+  }, 10000);
+
+  const done = () => clearTimeout(timeout);
+
   try {
-    // 1. ¿Es admin global?
-    const {data: adminData} = await sb.from('global_admins').select('user_id').eq('user_id', currentUser.id).maybeSingle();
-    isGlobalAdmin = !!adminData;
-    if (isGlobalAdmin) {
-      const {data: orgs} = await sb.from('organizations').select('*').order('created_at',{ascending:false});
-      allOrgs = orgs || [];
-      document.getElementById('nav-admin').style.display = 'flex';
-      document.getElementById('nav-admin-sep').style.display = 'block';
-      showApp();
-      return;
+    console.log('1. Comprobando admin global...');
+    const {data: adminData, error: adminErr} = await sb.from('global_admins')
+      .select('user_id').eq('user_id', currentUser.id).maybeSingle();
+
+    if (adminErr) {
+      console.error('Error global_admins:', adminErr.message);
+      // Si la tabla no existe o hay error, intentar continuar sin admin
     }
 
-    // 2. ¿Ya tiene membresía en alguna org?
-    const {data: memberships} = await sb.from('memberships')
+    isGlobalAdmin = !!adminData;
+    console.log('2. isGlobalAdmin:', isGlobalAdmin);
+
+    if (isGlobalAdmin) {
+      console.log('3. Cargando organizaciones...');
+      const {data: orgs, error: orgsErr} = await sb.from('organizations')
+        .select('*').order('created_at', {ascending: false});
+
+      if (orgsErr) console.error('Error orgs:', orgsErr.message);
+      allOrgs = orgs || [];
+      console.log('4. Orgs cargadas:', allOrgs.length);
+
+      document.getElementById('nav-admin').style.display = 'flex';
+      document.getElementById('nav-admin-sep').style.display = 'block';
+      done(); showApp(); return;
+    }
+
+    console.log('3. Comprobando membresías...');
+    const {data: memberships, error: memErr} = await sb.from('memberships')
       .select('organization_id, role, organizations(id, name)')
       .eq('user_id', currentUser.id);
+
+    if (memErr) console.error('Error memberships:', memErr.message);
+    console.log('4. Membresías encontradas:', memberships?.length || 0);
+
     if (memberships && memberships.length > 0) {
       const mem = memberships[0];
       currentOrgId = mem.organization_id;
@@ -1263,16 +1290,18 @@ async function checkUserSetup() {
       userRole = mem.role;
       await loadData();
       updateSidebarOrg();
-      showApp();
-      return;
+      done(); showApp(); return;
     }
 
-    // 3. ¿Tiene invitación pendiente creada por el admin?
+    console.log('5. Comprobando invitación pendiente...');
     const userEmail = currentUser.email;
-    const {data: invite} = await sb.from('pending_invites')
+    const {data: invite, error: invErr} = await sb.from('pending_invites')
       .select('organization_id, role, organizations(id, name)')
-      .eq('email', userEmail)
-      .maybeSingle();
+      .eq('email', userEmail).maybeSingle();
+
+    if (invErr) console.error('Error pending_invites:', invErr.message);
+    console.log('6. Invitación pendiente:', !!invite);
+
     if (invite) {
       await sb.from('memberships').insert({
         organization_id: invite.organization_id,
@@ -1285,18 +1314,17 @@ async function checkUserSetup() {
       userRole = invite.role || 'owner';
       await loadData();
       updateSidebarOrg();
-      showApp();
+      done(); showApp();
       toast('Bienvenido/a a ' + currentOrgName + '. Tu espacio ya está listo.', 'success');
       return;
     }
 
-    // 4. Sin org ni invitación
-    document.getElementById('loading-overlay').classList.add('hidden');
-    showNoAccessScreen();
+    console.log('7. Sin org ni invitación — acceso denegado');
+    done(); showNoAccessScreen();
+
   } catch(e) {
-    console.error('Error en setup:', e);
-    document.getElementById('loading-overlay').classList.add('hidden');
-    showNoAccessScreen();
+    console.error('checkUserSetup error:', e);
+    done(); showNoAccessScreen();
   }
 }
 
