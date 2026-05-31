@@ -223,6 +223,26 @@ tr:hover td{background:#fafaf9}
 /* ── Saving indicator ─────────────────────── */
 .saving-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#f59e0b;margin-left:.5rem;animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── Org setup screen ─────────────────────── */
+#org-setup-screen{position:fixed;inset:0;background:#0d0d10;z-index:800;display:flex;align-items:center;justify-content:center;flex-direction:column}
+#org-setup-screen.hidden{display:none}
+.org-setup-card{background:#18181b;border:1px solid #27272a;border-radius:8px;padding:2.5rem;width:100%;max-width:420px}
+.org-setup-title{font-size:1.1rem;font-weight:700;color:#fff;margin-bottom:.3rem}
+.org-setup-sub{font-size:.8rem;color:#71717a;margin-bottom:1.75rem;line-height:1.5}
+.org-steps{display:flex;gap:.5rem;margin-bottom:1.75rem}
+.org-step{flex:1;height:3px;border-radius:2px;background:#3f3f46}
+.org-step.done{background:#f59e0b}
+
+/* ── Admin panel ──────────────────────────── */
+.admin-badge{background:#f59e0b;color:#0d0d10;font-size:.58rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:.15rem .35rem;border-radius:2px;margin-left:.4rem}
+.org-badge{background:#27272a;color:#a1a1aa;font-size:.6rem;font-weight:600;padding:.2rem .5rem;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;display:block;margin-top:.3rem}
+.org-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;transition:border-color .12s}
+.org-card:hover{border-color:var(--border-2)}
+.org-card-name{font-weight:600;font-size:.88rem;margin-bottom:.15rem}
+.org-card-meta{font-size:.75rem;color:var(--muted)}
+.org-card-active{border-left:3px solid var(--sidebar-active)}
+.nav-sep{height:1px;background:#27272a;margin:.5rem 1.25rem}
 </style>
 </head>
 <body>
@@ -240,10 +260,6 @@ tr:hover td{background:#fafaf9}
   <div class="login-card">
     <div class="login-logo">INVOIX<span>·</span></div>
     <div class="login-subtitle">Facturación profesional para autónomos y pymes</div>
-    <div class="login-tabs">
-      <button class="login-tab active" id="tab-login" onclick="switchTab('login')">Iniciar sesión</button>
-      <button class="login-tab" id="tab-register" onclick="switchTab('register')">Crear cuenta</button>
-    </div>
     <div class="login-field">
       <label>Email</label>
       <input type="email" id="auth-email" placeholder="tu@email.com" autocomplete="email"/>
@@ -251,10 +267,6 @@ tr:hover td{background:#fafaf9}
     <div class="login-field">
       <label>Contraseña</label>
       <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doAuth()"/>
-    </div>
-    <div class="login-field" id="field-confirm" style="display:none">
-      <label>Confirmar contraseña</label>
-      <input type="password" id="auth-confirm" placeholder="••••••••"/>
     </div>
     <button class="login-btn" id="auth-btn" onclick="doAuth()">Iniciar sesión</button>
     <div class="login-error" id="auth-error"></div>
@@ -291,9 +303,16 @@ tr:hover td{background:#fafaf9}
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         Configuración
       </div>
+      <!-- Admin-only section -->
+      <div id="nav-admin-sep" class="nav-sep" style="display:none"></div>
+      <div class="nav-item" id="nav-admin" data-view="admin" onclick="navigate('admin')" style="display:none">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Panel Admin<span class="admin-badge">ADMIN</span>
+      </div>
     </nav>
     <div class="sidebar-footer">
       <div class="sidebar-user" id="sidebar-user-email"></div>
+      <div id="sidebar-org-badge" class="org-badge" style="display:none"></div>
       INVOIX v2.0
       <button class="btn-logout" onclick="logout()">Cerrar sesión</button>
     </div>
@@ -335,6 +354,11 @@ if (!IS_DEMO) {
 // ════════════════════════════════════════════════════════════
 let currentUser = null;
 let demoMode = false;
+let isGlobalAdmin = false;
+let currentOrgId = null;
+let currentOrgName = '';
+let userRole = 'owner'; // 'owner' | 'employee'
+let allOrgs = []; // only populated for global admin
 
 const DEFAULT_SETTINGS = {
   companyName: '', cif: '', address: '', city: '',
@@ -359,58 +383,39 @@ function toast(msg, type = 'info') {
 // ════════════════════════════════════════════════════════════
 // AUTH
 // ════════════════════════════════════════════════════════════
-let authTab = 'login';
-
-function switchTab(tab) {
-  authTab = tab;
-  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
-  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
-  document.getElementById('auth-btn').textContent = tab === 'login' ? 'Iniciar sesión' : 'Crear cuenta';
-  document.getElementById('field-confirm').style.display = tab === 'register' ? '' : 'none';
-  document.getElementById('auth-error').classList.remove('show');
-}
-
 function showAuthError(msg) {
   const el = document.getElementById('auth-error');
   el.textContent = msg;
   el.classList.add('show');
 }
 
+// Compatibility stub (called from logout reset)
+function switchTab(tab) {
+  document.getElementById('auth-error').classList.remove('show');
+}
+
 async function doAuth() {
   const email = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-password').value;
-  if (!email || !password) { showAuthError('Completa todos los campos.'); return; }
+  if (!email || !password) { showAuthError('Introduce tu email y contraseña.'); return; }
 
   const btn = document.getElementById('auth-btn');
   btn.disabled = true;
-  btn.textContent = 'Cargando...';
+  btn.textContent = 'Entrando...';
   document.getElementById('auth-error').classList.remove('show');
 
   try {
-    let result;
-    if (authTab === 'login') {
-      result = await sb.auth.signInWithPassword({ email, password });
-    } else {
-      const confirm = document.getElementById('auth-confirm').value;
-      if (password !== confirm) { showAuthError('Las contraseñas no coinciden.'); btn.disabled=false; btn.textContent='Crear cuenta'; return; }
-      if (password.length < 6) { showAuthError('La contraseña debe tener al menos 6 caracteres.'); btn.disabled=false; btn.textContent='Crear cuenta'; return; }
-      result = await sb.auth.signUp({ email, password });
-      if (!result.error && result.data.user && !result.data.session) {
-        showAuthError('Revisa tu email para confirmar tu cuenta.');
-        btn.disabled=false; btn.textContent='Crear cuenta'; return;
-      }
-    }
+    const result = await sb.auth.signInWithPassword({ email, password });
     if (result.error) throw result.error;
-    // onAuthStateChange will handle the rest
+    // onAuthStateChange handles the rest
   } catch (err) {
     const msgs = {
       'Invalid login credentials': 'Email o contraseña incorrectos.',
-      'User already registered': 'Este email ya está registrado.',
       'Email not confirmed': 'Confirma tu email antes de entrar.',
     };
-    showAuthError(msgs[err.message] || err.message || 'Error al autenticar.');
+    showAuthError(msgs[err.message] || err.message || 'Error al iniciar sesión.');
     btn.disabled = false;
-    btn.textContent = authTab === 'login' ? 'Iniciar sesión' : 'Crear cuenta';
+    btn.textContent = 'Iniciar sesión';
   }
 }
 
@@ -419,6 +424,7 @@ function enterDemoMode() {
   const saved = localStorage.getItem('invoix_demo');
   if (saved) { try { DB = JSON.parse(saved); } catch(e) { DB = { clients: [], invoices: [], settings: { ...DEFAULT_SETTINGS } }; } }
   document.getElementById('sidebar-user-email').textContent = 'Modo demo (local)';
+  document.getElementById('sidebar-org-badge').style.display = 'none';
   showApp();
 }
 
@@ -426,10 +432,19 @@ function logout() {
   if (!demoMode && sb) sb.auth.signOut();
   demoMode = false;
   currentUser = null;
+  isGlobalAdmin = false;
+  currentOrgId = null;
+  currentOrgName = '';
+  allOrgs = [];
   DB = { clients: [], invoices: [], settings: { ...DEFAULT_SETTINGS } };
   document.getElementById('app-shell').classList.add('hidden');
+  document.getElementById('org-setup-screen').classList.add('hidden');
   document.getElementById('login-screen').classList.remove('hidden');
   document.getElementById('auth-password').value = '';
+  // Reset admin nav
+  document.getElementById('nav-admin').style.display = 'none';
+  document.getElementById('nav-admin-sep').style.display = 'none';
+  document.getElementById('sidebar-org-badge').style.display = 'none';
   switchTab('login');
 }
 
@@ -441,14 +456,23 @@ function saveDemo() {
 }
 
 async function loadData() {
-  if (demoMode || IS_DEMO) return; // demo mode uses what's already in DB
+  if (demoMode || IS_DEMO) return;
   try {
-    const uid = currentUser.id;
-    const [cr, ir, sr] = await Promise.all([
-      sb.from('clients').select('*').eq('user_id', uid),
-      sb.from('invoices').select('*').eq('user_id', uid),
-      sb.from('settings').select('*').eq('user_id', uid).maybeSingle()
-    ]);
+    // Build queries scoped to the current org
+    let cq = sb.from('clients').select('*');
+    let iq = sb.from('invoices').select('*');
+    let sq = sb.from('settings').select('*');
+    if (currentOrgId) {
+      cq = cq.eq('organization_id', currentOrgId);
+      iq = iq.eq('organization_id', currentOrgId);
+      sq = sq.eq('organization_id', currentOrgId);
+    } else {
+      // Fallback: scope by user_id (backwards compat for orgs not yet migrated)
+      cq = cq.eq('user_id', currentUser.id);
+      iq = iq.eq('user_id', currentUser.id);
+      sq = sq.eq('user_id', currentUser.id);
+    }
+    const [cr, ir, sr] = await Promise.all([cq, iq, sq.maybeSingle()]);
     DB.clients = (cr.data || []).map(c => ({ id: c.id, name: c.name, cif: c.cif||'', address: c.address||'', email: c.email||'', phone: c.phone||'' }));
     DB.invoices = (ir.data || []).map(i => ({ id: i.id, number: i.number, clientId: i.client_id, date: i.date, dueDate: i.due_date, taxRate: i.tax_rate, irpfRate: i.irpf_rate, notes: i.notes||'', status: i.status, items: i.items || [] }));
     if (sr.data) {
@@ -463,7 +487,7 @@ async function loadData() {
 async function persistClient(client, isNew) {
   if (demoMode || IS_DEMO) { saveDemo(); return; }
   try {
-    const row = { id: client.id, user_id: currentUser.id, name: client.name, cif: client.cif, address: client.address, email: client.email, phone: client.phone };
+    const row = { id: client.id, user_id: currentUser.id, name: client.name, cif: client.cif, address: client.address, email: client.email, phone: client.phone, organization_id: currentOrgId };
     if (isNew) await sb.from('clients').insert(row);
     else await sb.from('clients').update(row).eq('id', client.id);
   } catch(e) { toast('Error al guardar cliente.', 'error'); }
@@ -477,7 +501,7 @@ async function persistDeleteClient(id) {
 async function persistInvoice(inv, isNew) {
   if (demoMode || IS_DEMO) { saveDemo(); return; }
   try {
-    const row = { id: inv.id, user_id: currentUser.id, number: inv.number, client_id: inv.clientId, date: inv.date, due_date: inv.dueDate, tax_rate: inv.taxRate, irpf_rate: inv.irpfRate, notes: inv.notes, status: inv.status, items: inv.items };
+    const row = { id: inv.id, user_id: currentUser.id, number: inv.number, client_id: inv.clientId, date: inv.date, due_date: inv.dueDate, tax_rate: inv.taxRate, irpf_rate: inv.irpfRate, notes: inv.notes, status: inv.status, items: inv.items, organization_id: currentOrgId };
     if (isNew) await sb.from('invoices').insert(row);
     else await sb.from('invoices').update(row).eq('id', inv.id);
   } catch(e) { toast('Error al guardar factura.', 'error'); }
@@ -491,7 +515,7 @@ async function persistDeleteInvoice(id) {
 async function persistSettings(s) {
   if (demoMode || IS_DEMO) { saveDemo(); return; }
   try {
-    const row = { user_id: currentUser.id, company_name: s.companyName, cif: s.cif, address: s.address, city: s.city, email: s.email, phone: s.phone, iban: s.iban, web: s.web, next_number: s.nextNumber, year: s.year };
+    const row = { user_id: currentUser.id, company_name: s.companyName, cif: s.cif, address: s.address, city: s.city, email: s.email, phone: s.phone, iban: s.iban, web: s.web, next_number: s.nextNumber, year: s.year, organization_id: currentOrgId };
     await sb.from('settings').upsert(row, { onConflict: 'user_id' });
   } catch(e) { toast('Error al guardar configuración.', 'error'); }
 }
@@ -537,7 +561,7 @@ function pendingTotal() {
 // ROUTER
 // ════════════════════════════════════════════════════════════
 let currentView='dashboard', currentParams={};
-const VIEW_TITLES={dashboard:'Dashboard',invoices:'Facturas','new-invoice':'Nueva factura','invoice-detail':'Detalle de factura',clients:'Clientes',settings:'Configuración'};
+const VIEW_TITLES={dashboard:'Dashboard',invoices:'Facturas','new-invoice':'Nueva factura','invoice-detail':'Detalle de factura',clients:'Clientes',settings:'Configuración',admin:'Panel Admin'};
 
 function navigate(view,params={}) {
   currentView=view; currentParams=params;
@@ -546,10 +570,10 @@ function navigate(view,params={}) {
 }
 function render() {
   document.getElementById('topbar-title').textContent=VIEW_TITLES[currentView]||'';
-  const views={dashboard:viewDashboard,invoices:viewInvoices,'new-invoice':viewInvoiceForm,'invoice-detail':viewInvoiceDetail,clients:viewClients,settings:viewSettings};
+  const views={dashboard:viewDashboard,invoices:viewInvoices,'new-invoice':viewInvoiceForm,'invoice-detail':viewInvoiceDetail,clients:viewClients,settings:viewSettings,admin:viewAdmin};
   const fn=views[currentView];
   document.getElementById('app-content').innerHTML=fn?fn(currentParams):'';
-  const acts={dashboard:actDashboard,invoices:actInvoices,'new-invoice':actNewInvoice,'invoice-detail':actInvoiceDetail,clients:actClients,settings:actSettings};
+  const acts={dashboard:actDashboard,invoices:actInvoices,'new-invoice':actNewInvoice,'invoice-detail':actInvoiceDetail,clients:actClients,settings:actSettings,admin:actAdmin};
   const af=acts[currentView];
   if(af)af(currentParams); else document.getElementById('topbar-actions').innerHTML='';
 }
@@ -1018,6 +1042,284 @@ function generateInvoicePDF(invId) {
 }
 
 // ════════════════════════════════════════════════════════════
+// ADMIN PANEL
+// ════════════════════════════════════════════════════════════
+function viewAdmin() {
+  const viewing = currentOrgId ? allOrgs.find(o=>o.id===currentOrgId) : null;
+  const orgRows = allOrgs.map(org => `
+    <div class="org-card ${org.id===currentOrgId?'org-card-active':''}">
+      <div>
+        <div class="org-card-name">${org.name}</div>
+        <div class="org-card-meta">Plan: <strong>${org.plan||'free'}</strong> · Alta: ${org.created_at?new Date(org.created_at).toLocaleDateString('es-ES'):'—'}</div>
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        ${org.id!==currentOrgId
+          ?`<button class="btn btn-ghost btn-sm" onclick="switchAdminToOrg('${org.id}','${org.name.replace(/'/g,"\\'").replace(/"/g,'\\"')}')">👁 Ver como</button>`
+          :`<span class="badge badge-paid">Viendo ahora</span> <button class="btn btn-primary btn-sm" onclick="navigate('dashboard')">Ir al dashboard →</button>`
+        }
+        <button class="btn btn-danger btn-sm" onclick="deleteOrg('${org.id}','${org.name.replace(/'/g,"\\'")}')">×</button>
+      </div>
+    </div>`).join('');
+
+  return `
+  ${viewing ? `<div class="alert alert-warn" style="margin-bottom:1rem">
+    <strong>👁 Modo vista:</strong> estás viendo los datos de <strong>${viewing.name}</strong> &nbsp;—&nbsp;
+    <a onclick="switchAdminToOrg(null)" style="font-weight:700;cursor:pointer">Salir y volver al panel →</a>
+  </div>` : ''}
+
+  <div style="display:grid;grid-template-columns:1fr 380px;gap:1.5rem;align-items:start;max-width:1100px">
+
+    <!-- Lista de empresas -->
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-title">Empresas activas (${allOrgs.length})</span>
+        <button class="btn btn-ghost btn-sm" onclick="refreshAdminOrgs()">↻ Actualizar</button>
+      </div>
+      ${allOrgs.length === 0
+        ? `<div class="empty"><div class="empty-title">Sin empresas todavía</div><div class="empty-sub">Crea la primera empresa con el formulario →</div></div>`
+        : `<div style="padding:.75rem">${orgRows}</div>`
+      }
+    </div>
+
+    <!-- Formulario nueva empresa -->
+    <div>
+      <div class="panel">
+        <div class="panel-body">
+          <div class="form-section-title">Nueva empresa cliente</div>
+          <div class="form-group" style="margin-bottom:.875rem">
+            <label class="form-label">Nombre de la empresa *</label>
+            <input class="form-input" id="new-org-name" placeholder="Clínica FisioPlus S.L."/>
+          </div>
+          <div class="form-group" style="margin-bottom:.875rem">
+            <label class="form-label">Email del propietario *</label>
+            <input class="form-input" id="new-org-email" type="email" placeholder="propietario@empresa.com"/>
+            <div style="font-size:.7rem;color:var(--muted);margin-top:.3rem">Este email recibirá acceso a la cuenta.</div>
+          </div>
+          <div class="form-group" style="margin-bottom:1rem">
+            <label class="form-label">Plan</label>
+            <select class="form-input form-select" id="new-org-plan">
+              <option value="free">Free (gratis)</option>
+              <option value="pro">Pro (9,99 €/mes)</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="createNewClientOrg()">
+            Crear empresa y preparar acceso →
+          </button>
+          <div class="login-error" id="admin-org-error" style="margin-top:.75rem"></div>
+        </div>
+      </div>
+
+      <!-- Panel de instrucciones (oculto hasta crear) -->
+      <div id="admin-instructions" class="panel" style="display:none;margin-top:1rem;border-left:3px solid var(--green)">
+        <div class="panel-body">
+          <div style="font-size:.8rem;font-weight:700;color:var(--green);margin-bottom:.75rem">✓ Empresa creada — Siguiente paso</div>
+          <div style="font-size:.82rem;color:var(--text);line-height:1.7">
+            Ve a <strong>Supabase → Authentication → Users → Add user</strong><br>
+            Email: <strong id="instr-email" style="font-family:var(--mono);background:#f5f5f4;padding:.1rem .3rem;border-radius:2px"></strong>
+            <button onclick="copyInstrEmail()" style="background:none;border:1px solid var(--border);border-radius:3px;padding:.15rem .4rem;font-size:.7rem;cursor:pointer;margin-left:.4rem">Copiar</button><br>
+            Pon la contraseña que quieras y mándasela por WhatsApp/email.
+          </div>
+          <div style="margin-top:.875rem;font-size:.78rem;color:var(--muted)">
+            Cuando el cliente entre por primera vez con esas credenciales, la app le asignará automáticamente su empresa.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>`;
+}
+
+function actAdmin() {
+  document.getElementById('topbar-actions').innerHTML = '';
+}
+
+function copyInstrEmail() {
+  const email = document.getElementById('instr-email')?.textContent;
+  if (email) { navigator.clipboard.writeText(email); toast('Email copiado.'); }
+}
+
+async function createNewClientOrg() {
+  const name  = document.getElementById('new-org-name')?.value.trim();
+  const email = document.getElementById('new-org-email')?.value.trim();
+  const plan  = document.getElementById('new-org-plan')?.value || 'free';
+  const errEl = document.getElementById('admin-org-error');
+
+  errEl.classList.remove('show');
+  if (!name)  { errEl.textContent='El nombre es obligatorio.';  errEl.classList.add('show'); return; }
+  if (!email) { errEl.textContent='El email es obligatorio.';   errEl.classList.add('show'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errEl.textContent='Email no válido.'; errEl.classList.add('show'); return;
+  }
+
+  const btn = document.querySelector('#app-content .btn-primary');
+  if (btn) { btn.disabled=true; btn.textContent='Creando...'; }
+
+  try {
+    // Crear organización
+    const {data: org, error: orgErr} = await sb.from('organizations')
+      .insert({ name, plan, created_by: currentUser.id })
+      .select().single();
+    if (orgErr) throw orgErr;
+
+    // Crear invitación pendiente
+    const {error: invErr} = await sb.from('pending_invites').insert({
+      email,
+      organization_id: org.id,
+      role: 'owner',
+      invited_by: currentUser.id
+    });
+    if (invErr) throw invErr;
+
+    // Actualizar lista local y limpiar form
+    allOrgs.unshift({ ...org });
+    document.getElementById('new-org-name').value  = '';
+    document.getElementById('new-org-email').value = '';
+
+    // Mostrar instrucciones
+    document.getElementById('instr-email').textContent = email;
+    document.getElementById('admin-instructions').style.display = 'block';
+
+    render();
+    toast('Empresa creada. Ahora crea la cuenta en Supabase Auth.', 'success');
+  } catch(e) {
+    const msg = e.message?.includes('duplicate') || e.message?.includes('unique')
+      ? 'Ya existe una invitación para ese email.'
+      : (e.message || 'Error al crear la empresa.');
+    errEl.textContent = msg;
+    errEl.classList.add('show');
+  } finally {
+    if (btn) { btn.disabled=false; btn.textContent='Crear empresa y preparar acceso →'; }
+  }
+}
+
+async function deleteOrg(orgId, orgName) {
+  if (!confirm(`¿Eliminar la empresa "${orgName}"? Se borrarán también sus datos (clientes, facturas). Esta acción no se puede deshacer.`)) return;
+  try {
+    await sb.from('pending_invites').delete().eq('organization_id', orgId);
+    await sb.from('memberships').delete().eq('organization_id', orgId);
+    await sb.from('clients').delete().eq('organization_id', orgId);
+    await sb.from('invoices').delete().eq('organization_id', orgId);
+    await sb.from('settings').delete().eq('organization_id', orgId);
+    await sb.from('organizations').delete().eq('id', orgId);
+    allOrgs = allOrgs.filter(o=>o.id!==orgId);
+    if (currentOrgId === orgId) { currentOrgId=null; currentOrgName=''; }
+    render();
+    toast('Empresa eliminada.', 'success');
+  } catch(e) { toast('Error al eliminar: ' + e.message, 'error'); }
+}
+
+async function refreshAdminOrgs() {
+  try {
+    const {data} = await sb.from('organizations').select('*').order('created_at',{ascending:false});
+    allOrgs = data || [];
+    render();
+    toast('Lista actualizada.', 'success');
+  } catch(e) { toast('Error al cargar organizaciones.', 'error'); }
+}
+
+async function switchAdminToOrg(orgId, orgName) {
+  if (!orgId) {
+    currentOrgId=null; currentOrgName='';
+    DB = { clients:[], invoices:[], settings:{...DEFAULT_SETTINGS} };
+    document.getElementById('sidebar-org-badge').style.display='none';
+    navigate('admin');
+    return;
+  }
+  document.getElementById('loading-overlay').classList.remove('hidden');
+  currentOrgId=orgId; currentOrgName=orgName;
+  await loadData();
+  document.getElementById('loading-overlay').classList.add('hidden');
+  const badge=document.getElementById('sidebar-org-badge');
+  badge.textContent='👁 '+orgName; badge.style.display='block';
+  navigate('dashboard');
+  toast('Viendo como: '+orgName);
+}
+
+
+
+// ════════════════════════════════════════════════════════════
+// USER SETUP CHECK
+// ════════════════════════════════════════════════════════════
+async function checkUserSetup() {
+  if (IS_DEMO || demoMode) { showApp(); return; }
+  try {
+    // 1. ¿Es admin global?
+    const {data: adminData} = await sb.from('global_admins').select('user_id').eq('user_id', currentUser.id).maybeSingle();
+    isGlobalAdmin = !!adminData;
+    if (isGlobalAdmin) {
+      const {data: orgs} = await sb.from('organizations').select('*').order('created_at',{ascending:false});
+      allOrgs = orgs || [];
+      document.getElementById('nav-admin').style.display = 'flex';
+      document.getElementById('nav-admin-sep').style.display = 'block';
+      showApp();
+      return;
+    }
+
+    // 2. ¿Ya tiene membresía en alguna org?
+    const {data: memberships} = await sb.from('memberships')
+      .select('organization_id, role, organizations(id, name)')
+      .eq('user_id', currentUser.id);
+    if (memberships && memberships.length > 0) {
+      const mem = memberships[0];
+      currentOrgId = mem.organization_id;
+      currentOrgName = mem.organizations?.name || '';
+      userRole = mem.role;
+      await loadData();
+      updateSidebarOrg();
+      showApp();
+      return;
+    }
+
+    // 3. ¿Tiene invitación pendiente creada por el admin?
+    const userEmail = currentUser.email;
+    const {data: invite} = await sb.from('pending_invites')
+      .select('organization_id, role, organizations(id, name)')
+      .eq('email', userEmail)
+      .maybeSingle();
+    if (invite) {
+      await sb.from('memberships').insert({
+        organization_id: invite.organization_id,
+        user_id: currentUser.id,
+        role: invite.role || 'owner'
+      });
+      await sb.from('pending_invites').delete().eq('email', userEmail);
+      currentOrgId = invite.organization_id;
+      currentOrgName = invite.organizations?.name || '';
+      userRole = invite.role || 'owner';
+      await loadData();
+      updateSidebarOrg();
+      showApp();
+      toast('Bienvenido/a a ' + currentOrgName + '. Tu espacio ya está listo.', 'success');
+      return;
+    }
+
+    // 4. Sin org ni invitación
+    document.getElementById('loading-overlay').classList.add('hidden');
+    showNoAccessScreen();
+  } catch(e) {
+    console.error('Error en setup:', e);
+    document.getElementById('loading-overlay').classList.add('hidden');
+    showNoAccessScreen();
+  }
+}
+
+function showNoAccessScreen() {
+  document.getElementById('login-screen').classList.remove('hidden');
+  const errEl = document.getElementById('auth-error');
+  errEl.textContent = 'Tu cuenta no tiene acceso asignado. Contacta con el administrador.';
+  errEl.classList.add('show');
+  document.getElementById('auth-email').value = '';
+  document.getElementById('auth-password').value = '';
+  if (sb) sb.auth.signOut();
+}
+
+function updateSidebarOrg() {
+  const badge = document.getElementById('sidebar-org-badge');
+  if (currentOrgName) { badge.textContent = currentOrgName; badge.style.display = 'block'; }
+  else { badge.style.display = 'none'; }
+}
+
+// ════════════════════════════════════════════════════════════
 // APP INIT
 // ════════════════════════════════════════════════════════════
 function showApp() {
@@ -1028,7 +1330,6 @@ function showApp() {
 }
 
 async function init() {
-  // Demo mode (no Supabase configured)
   if (IS_DEMO) {
     const saved = localStorage.getItem('invoix_demo');
     if (saved) { try { DB = JSON.parse(saved); } catch(e) {} }
@@ -1037,24 +1338,19 @@ async function init() {
     showApp();
     return;
   }
-
-  // Supabase mode
   sb.auth.onAuthStateChange(async (event, session) => {
     if (session?.user) {
       currentUser = session.user;
       document.getElementById('sidebar-user-email').textContent = currentUser.email;
       document.getElementById('loading-overlay').classList.remove('hidden');
       document.getElementById('login-screen').classList.add('hidden');
-      await loadData();
-      showApp();
+      await checkUserSetup();
     } else if (event === 'SIGNED_OUT' || !session) {
       document.getElementById('loading-overlay').classList.add('hidden');
       document.getElementById('app-shell').classList.add('hidden');
       document.getElementById('login-screen').classList.remove('hidden');
     }
   });
-
-  // Check existing session
   const { data: { session } } = await sb.auth.getSession();
   if (!session) {
     document.getElementById('loading-overlay').classList.add('hidden');
