@@ -1858,7 +1858,7 @@ async function checkUserSetup() {
     }
 
     console.log('3. Comprobando membresías (via RPC)...');
-    const {data: memberships, error: memErr} = await sb.rpc('get_my_memberships');
+    const {data: memberships, error: memErr} = await sb.rpc('get_my_memberships', {uid: currentUser.id});
 
     if (memErr) console.error('Error get_my_memberships:', memErr.message);
     console.log('4. Membresías encontradas:', memberships?.length || 0);
@@ -1874,14 +1874,14 @@ async function checkUserSetup() {
     }
 
     console.log('5. Comprobando invitación pendiente (via RPC)...');
-    const {data: invites, error: invErr} = await sb.rpc('get_my_pending_invite');
+    const {data: invites, error: invErr} = await sb.rpc('get_my_pending_invite', {user_email: currentUser.email});
 
     if (invErr) console.error('Error get_my_pending_invite:', invErr.message);
     const invite = invites && invites.length > 0 ? invites[0] : null;
     console.log('6. Invitación pendiente:', !!invite);
 
     if (invite) {
-      await sb.rpc('accept_my_invite');
+      await sb.rpc('accept_my_invite', {uid: currentUser.id, user_email: currentUser.email});
       currentOrgId = invite.organization_id;
       currentOrgName = invite.org_name || '';
       userRole = invite.role || 'owner';
