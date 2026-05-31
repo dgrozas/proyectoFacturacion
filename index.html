@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Factur — Gestión de Facturas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --sidebar:#18181b;
+  --sidebar-hover:#27272a;
+  --sidebar-active:#f59e0b;
+  --sidebar-text:#a1a1aa;
+  --bg:#fafaf9;
+  --surface:#ffffff;
+  --border:#e7e5e4;
+  --border-2:#d6d3d1;
+  --text:#1c1917;
+  --muted:#78716c;
+  --light:#a8a29e;
+  --accent:#b45309;
+  --accent-bg:#fffbeb;
+  --accent-border:#fcd34d;
+  --green:#15803d;
+  --green-bg:#f0fdf4;
+  --green-border:#bbf7d0;
+  --red:#b91c1c;
+  --red-bg:#fef2f2;
+  --red-border:#fecaca;
+  --mono:'Courier New',Courier,monospace;
+  --font:'Inter',system-ui,sans-serif;
+  --radius:4px;
+}
+html{font-size:14px}
+body{font-family:var(--font);background:var(--bg);color:var(--text);display:flex;min-height:100vh;line-height:1.5}
+a{text-decoration:none;color:inherit}
+button{font-family:var(--font);cursor:pointer}
+input,select,textarea{font-family:var(--font)}
+
+/* ── Sidebar ──────────────────────────────── */
+.sidebar{width:220px;flex-shrink:0;background:var(--sidebar);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;border-right:1px solid #27272a}
+.sidebar-logo{padding:1.5rem 1.25rem 1.25rem;border-bottom:1px solid #27272a}
+.logo-mark{font-size:1.1rem;font-weight:700;letter-spacing:.12em;color:#ffffff;display:flex;align-items:baseline;gap:.35rem}
+.logo-dot{color:var(--sidebar-active);font-size:1.4rem;line-height:.8}
+.logo-sub{font-size:.65rem;color:#52525b;font-weight:500;letter-spacing:.08em;text-transform:uppercase;margin-top:.2rem}
+.sidebar-nav{flex:1;padding:.75rem 0}
+.nav-item{display:flex;align-items:center;gap:.75rem;padding:.6rem 1.25rem;font-size:.82rem;font-weight:500;color:var(--sidebar-text);cursor:pointer;transition:background .12s,color .12s;border-left:2px solid transparent;user-select:none}
+.nav-item:hover{background:var(--sidebar-hover);color:#d4d4d8}
+.nav-item.active{color:var(--sidebar-active);background:rgba(245,158,11,.07);border-left-color:var(--sidebar-active)}
+.nav-icon{width:16px;height:16px;opacity:.7;flex-shrink:0}
+.nav-item.active .nav-icon{opacity:1}
+.sidebar-footer{padding:1rem 1.25rem;border-top:1px solid #27272a;font-size:.7rem;color:#52525b;line-height:1.6}
+
+/* ── Main ─────────────────────────────────── */
+.main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:.875rem 2rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.topbar-title{font-size:.95rem;font-weight:600;color:var(--text)}
+.topbar-actions{display:flex;gap:.625rem;align-items:center}
+.content{padding:1.75rem 2rem;flex:1}
+
+/* ── Buttons ──────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:.4rem;border-radius:var(--radius);font-size:.8rem;font-weight:500;padding:.5rem 1rem;border:1px solid transparent;transition:all .12s;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{background:#92400e}
+.btn-ghost{background:transparent;color:var(--muted);border-color:var(--border)}
+.btn-ghost:hover{border-color:var(--border-2);color:var(--text)}
+.btn-danger{background:transparent;color:var(--red);border-color:#fecaca}
+.btn-danger:hover{background:var(--red-bg)}
+.btn-sm{padding:.35rem .75rem;font-size:.75rem}
+.btn-success{background:var(--green);color:#fff;border-color:var(--green)}
+.btn-success:hover{background:#166534}
+
+/* ── Stats ────────────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.75rem}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.25rem}
+.stat-label{font-size:.68rem;font-weight:600;color:var(--light);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.35rem}
+.stat-value{font-size:1.5rem;font-weight:700;color:var(--text);font-family:var(--mono);letter-spacing:-.02em}
+.stat-sub{font-size:.72rem;color:var(--muted);margin-top:.2rem}
+.stat-card.accent-card{border-left:3px solid var(--accent)}
+.stat-card.green-card{border-left:3px solid var(--green)}
+.stat-card.red-card{border-left:3px solid var(--red)}
+
+/* ── Tables ───────────────────────────────── */
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.table-header{padding:.875rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.table-title{font-size:.82rem;font-weight:600}
+table{width:100%;border-collapse:collapse}
+th{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--light);padding:.6rem 1rem;text-align:left;background:#fafaf9;border-bottom:1px solid var(--border)}
+td{padding:.7rem 1rem;font-size:.82rem;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafaf9}
+.td-mono{font-family:var(--mono);font-size:.78rem;color:var(--muted)}
+.td-amount{font-family:var(--mono);font-size:.85rem;font-weight:600;text-align:right}
+.td-actions{display:flex;gap:.4rem;justify-content:flex-end}
+
+/* ── Badges ───────────────────────────────── */
+.badge{display:inline-flex;align-items:center;font-size:.65rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:.2rem .45rem;border-radius:2px;border:1px solid}
+.badge-pending{color:var(--accent);background:var(--accent-bg);border-color:var(--accent-border)}
+.badge-paid{color:var(--green);background:var(--green-bg);border-color:var(--green-border)}
+.badge-overdue{color:var(--red);background:var(--red-bg);border-color:var(--red-border)}
+.badge-draft{color:var(--muted);background:#f5f5f4;border-color:var(--border)}
+
+/* ── Forms ────────────────────────────────── */
+.form-grid{display:grid;gap:1rem}
+.form-row{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem}
+.form-row-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+.form-group{display:flex;flex-direction:column;gap:.3rem}
+.form-label{font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.form-input{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:.5rem .75rem;font-size:.85rem;transition:border-color .12s;width:100%}
+.form-input:focus{outline:none;border-color:var(--accent)}
+.form-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%2378716c' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .6rem center}
+.form-textarea{resize:vertical;min-height:80px}
+.form-section-title{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding-bottom:.5rem;border-bottom:1px solid var(--border);margin-bottom:1rem}
+
+/* ── Invoice layout ───────────────────────── */
+.invoice-layout{display:grid;grid-template-columns:1fr 320px;gap:1.5rem;align-items:start}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
+.panel-body{padding:1.25rem}
+
+/* ── Line items ───────────────────────────── */
+.items-table{width:100%;border-collapse:collapse}
+.items-table th{font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--light);padding:.5rem .75rem;text-align:left;background:#fafaf9;border-bottom:1px solid var(--border);border-top:1px solid var(--border)}
+.items-table td{padding:.45rem .75rem;border-bottom:1px solid var(--border)}
+.item-input{background:transparent;border:none;width:100%;padding:.25rem;font-size:.82rem;color:var(--text);font-family:var(--font)}
+.item-input:focus{outline:1px solid var(--accent);border-radius:2px}
+.item-input.mono{font-family:var(--mono)}
+.item-total{font-family:var(--mono);font-size:.82rem;font-weight:600;color:var(--text);text-align:right;padding-right:.75rem}
+.btn-remove-item{background:none;border:none;color:var(--light);cursor:pointer;font-size:1rem;padding:.1rem .25rem;border-radius:2px}
+.btn-remove-item:hover{color:var(--red)}
+.add-item-row{padding:.6rem .75rem;border-top:1px solid var(--border);background:#fafaf9}
+
+/* ── Totals ───────────────────────────────── */
+.totals-section{padding:1rem 1.25rem}
+.total-row{display:flex;justify-content:space-between;align-items:center;padding:.35rem 0;font-size:.82rem}
+.total-row.divider{border-top:1px solid var(--border);margin-top:.35rem;padding-top:.7rem}
+.total-row.grand{font-weight:700;font-size:1rem}
+.total-label{color:var(--muted)}
+.total-value{font-family:var(--mono);font-weight:500}
+.total-row.grand .total-value{color:var(--accent);font-size:1.1rem}
+
+/* ── Invoice preview ──────────────────────── */
+.invoice-preview{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;max-width:720px}
+.inv-header{display:flex;justify-content:space-between;margin-bottom:2rem;align-items:flex-start}
+.inv-company-name{font-size:1.2rem;font-weight:700;letter-spacing:-.01em;margin-bottom:.25rem}
+.inv-company-details{font-size:.78rem;color:var(--muted);line-height:1.7}
+.inv-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--light);margin-bottom:.2rem}
+.inv-number{font-size:1.4rem;font-weight:700;font-family:var(--mono);color:var(--text)}
+.inv-meta{font-size:.78rem;color:var(--muted);line-height:1.8;margin-top:.5rem}
+.inv-client-box{background:#fafaf9;border:1px solid var(--border);border-radius:var(--radius);padding:.875rem 1rem;margin-bottom:1.75rem}
+.inv-client-name{font-size:.9rem;font-weight:600;margin-bottom:.2rem}
+.inv-client-details{font-size:.75rem;color:var(--muted);line-height:1.7}
+.inv-items-table{width:100%;border-collapse:collapse;margin-bottom:1.5rem}
+.inv-items-table th{font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--light);padding:.5rem .75rem;border-bottom:2px solid var(--border)}
+.inv-items-table th:last-child,.inv-items-table td:last-child{text-align:right}
+.inv-items-table td{padding:.6rem .75rem;font-size:.82rem;border-bottom:1px solid var(--border)}
+.inv-totals{max-width:260px;margin-left:auto;margin-bottom:1.5rem}
+.inv-total-row{display:flex;justify-content:space-between;padding:.3rem 0;font-size:.82rem}
+.inv-total-row.grand{border-top:2px solid var(--text);margin-top:.35rem;padding-top:.6rem;font-weight:700;font-size:1rem}
+.inv-total-row.grand span:last-child{color:var(--accent)}
+.inv-footer{border-top:1px solid var(--border);padding-top:1.25rem;font-size:.75rem;color:var(--muted);line-height:1.7}
+
+/* ── Empty ────────────────────────────────── */
+.empty{padding:3rem;text-align:center;color:var(--light)}
+.empty-title{font-size:.9rem;font-weight:600;color:var(--muted);margin-bottom:.4rem}
+.empty-sub{font-size:.8rem}
+
+/* ── Modal ────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--surface);border-radius:var(--radius);box-shadow:0 20px 60px rgba(0,0,0,.2);width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
+.modal-header{padding:1.1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:.9rem;font-weight:600}
+.modal-close{background:none;border:none;font-size:1.1rem;color:var(--light);cursor:pointer;padding:.15rem .35rem;border-radius:2px}
+.modal-close:hover{background:var(--border);color:var(--text)}
+.modal-body{padding:1.25rem}
+.modal-footer{padding:.875rem 1.25rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:.5rem}
+
+/* ── Settings ─────────────────────────────── */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;max-width:800px}
+.settings-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem}
+.settings-card-title{font-size:.8rem;font-weight:700;margin-bottom:1rem;padding-bottom:.6rem;border-bottom:1px solid var(--border);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+
+/* ── Filters ──────────────────────────────── */
+.filter-bar{display:flex;gap:.625rem;align-items:center}
+.filter-input{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.45rem .75rem;font-size:.8rem;color:var(--text);width:220px}
+.filter-input:focus{outline:none;border-color:var(--accent)}
+.filter-select{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.45rem .6rem;font-size:.8rem;color:var(--text);appearance:none;padding-right:1.5rem;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24'%3E%3Cpath fill='%2378716c' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .5rem center}
+.filter-select:focus{outline:none;border-color:var(--accent)}
+
+/* ── Breadcrumb ───────────────────────────── */
+.breadcrumb{display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--muted);margin-bottom:1.25rem}
+.breadcrumb a{color:var(--accent);cursor:pointer}
+.breadcrumb-sep{color:var(--light)}
+
+/* ── Alert ────────────────────────────────── */
+.alert{padding:.75rem 1rem;border-radius:var(--radius);font-size:.82rem;margin-bottom:1rem}
+.alert-success{background:var(--green-bg);border:1px solid var(--green-border);color:var(--green)}
+.alert-warn{background:var(--accent-bg);border:1px solid var(--accent-border);color:var(--accent)}
+
+.text-muted{color:var(--muted)}.text-sm{font-size:.78rem}.font-mono{font-family:var(--mono)}
+.mt-1{margin-top:.5rem}.mt-2{margin-top:1rem}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">FACTUR<span class="logo-dot">·</span></div>
+    <div class="logo-sub">Gestión de facturas</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-item active" data-view="dashboard" onclick="navigate('dashboard')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" data-view="invoices" onclick="navigate('invoices')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Facturas
+    </div>
+    <div class="nav-item" data-view="new-invoice" onclick="navigate('new-invoice')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Nueva factura
+    </div>
+    <div class="nav-item" data-view="clients" onclick="navigate('clients')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Clientes
+    </div>
+    <div class="nav-item" data-view="settings" onclick="navigate('settings')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Configuración
+    </div>
+  </nav>
+  <div class="sidebar-footer">Factur v1.0<br>David González Rozas</div>
+</aside>
+
+<main class="main">
+  <header class="topbar">
+    <span class="topbar-title" id="topbar-title">Dashboard</span>
+    <div class="topbar-actions" id="topbar-actions"></div>
+  </header>
+  <div class="content" id="app-content"></div>
+</main>
+
+<div id="modal-container"></div>
+
+<script>
+'use strict';
+
+// ════════════════════════════════════════════
+// STORAGE
+// ════════════════════════════════════════════
+const STORE_KEY = 'factur_v1';
+let DB = load();
+
+function load() {
+  try { const r = localStorage.getItem(STORE_KEY); if (r) return JSON.parse(r); } catch(e) {}
+  return {
+    clients: [],
+    invoices: [],
+    settings: {
+      companyName: 'David González Rozas', cif: '', address: '', city: '',
+      email: 'davigonzas@gmail.com', phone: '+34 603 441 525',
+      iban: '', web: 'dgrozas.github.io', nextNumber: 1, year: new Date().getFullYear()
+    }
+  };
+}
+function save() { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); }
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function invoiceNumber() { return `FAC-${DB.settings.year}-${String(DB.settings.nextNumber).padStart(3,'0')}`; }
+
+// ════════════════════════════════════════════
+// ROUTER
+// ════════════════════════════════════════════
+let currentView = 'dashboard', currentParams = {};
+
+function navigate(view, params = {}) {
+  currentView = view; currentParams = params;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.view === view));
+  render();
+}
+
+const VIEW_TITLES = { dashboard:'Dashboard', invoices:'Facturas', 'new-invoice':'Nueva factura', 'invoice-detail':'Detalle de factura', clients:'Clientes', settings:'Configuración' };
+
+function render() {
+  document.getElementById('topbar-title').textContent = VIEW_TITLES[currentView] || '';
+  const views = { dashboard: viewDashboard, invoices: viewInvoices, 'new-invoice': viewInvoiceForm, 'invoice-detail': viewInvoiceDetail, clients: viewClients, settings: viewSettings };
+  const fn = views[currentView];
+  document.getElementById('app-content').innerHTML = fn ? fn(currentParams) : '';
+  const acts = { dashboard: actDashboard, invoices: actInvoices, 'new-invoice': actNewInvoice, 'invoice-detail': actInvoiceDetail, clients: actClients, settings: actSettings };
+  const af = acts[currentView];
+  if (af) af(currentParams); else document.getElementById('topbar-actions').innerHTML = '';
+}
+
+// ════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════
+function fmtMoney(v) { return (parseFloat(v)||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
+function fmtDate(iso) { if(!iso) return '—'; return new Date(iso+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+function today() { return new Date().toISOString().slice(0,10); }
+function addDays(iso, d) { const dt = new Date(iso+'T00:00:00'); dt.setDate(dt.getDate()+d); return dt.toISOString().slice(0,10); }
+function getClient(id) { return DB.clients.find(c=>c.id===id)||null; }
+function getInvoice(id) { return DB.invoices.find(i=>i.id===id)||null; }
+function calcTotals(items, taxRate, irpfRate) {
+  const base = items.reduce((s,i)=>s+(parseFloat(i.qty)||0)*(parseFloat(i.price)||0),0);
+  const tax = base*(parseFloat(taxRate)||0)/100;
+  const irpf = base*(parseFloat(irpfRate)||0)/100;
+  return { base, tax, irpf, total: base+tax-irpf };
+}
+function getStatus(inv) {
+  if (inv.status==='paid') return 'paid';
+  if (inv.status==='draft') return 'draft';
+  if (inv.dueDate && inv.dueDate < today()) return 'overdue';
+  return 'pending';
+}
+function statusBadge(inv) {
+  const s = getStatus(inv);
+  const map = { draft:['Borrador','badge-draft'], pending:['Pendiente','badge-pending'], paid:['Cobrada','badge-paid'], overdue:['Vencida','badge-overdue'] };
+  const [label,cls] = map[s]||['—',''];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+function monthTotal() {
+  const m = new Date().toISOString().slice(0,7);
+  return DB.invoices.filter(i=>i.date&&i.date.startsWith(m)&&i.status!=='draft').reduce((s,i)=>s+calcTotals(i.items,i.taxRate,i.irpfRate).total,0);
+}
+function pendingTotal() {
+  return DB.invoices.filter(i=>['pending','overdue'].includes(getStatus(i))).reduce((s,i)=>s+calcTotals(i.items,i.taxRate,i.irpfRate).total,0);
+}
+
+// ════════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════════
+function viewDashboard() {
+  const recent = [...DB.invoices].sort((a,b)=>b.date>a.date?1:-1).slice(0,8);
+  const overdue = DB.invoices.filter(i=>getStatus(i)==='overdue').length;
+  const cobradas = DB.invoices.filter(i=>i.status==='paid').reduce((s,i)=>s+calcTotals(i.items,i.taxRate,i.irpfRate).total,0);
+  return `
+  <div class="stats-grid">
+    <div class="stat-card accent-card">
+      <div class="stat-label">Facturado este mes</div>
+      <div class="stat-value">${fmtMoney(monthTotal())}</div>
+      <div class="stat-sub">${DB.invoices.filter(i=>i.date&&i.date.startsWith(new Date().toISOString().slice(0,7))).length} facturas</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Pendiente de cobro</div>
+      <div class="stat-value">${fmtMoney(pendingTotal())}</div>
+      <div class="stat-sub">${DB.invoices.filter(i=>['pending','overdue'].includes(getStatus(i))).length} facturas</div>
+    </div>
+    <div class="stat-card green-card">
+      <div class="stat-label">Cobradas (total)</div>
+      <div class="stat-value">${fmtMoney(cobradas)}</div>
+      <div class="stat-sub">${DB.invoices.filter(i=>i.status==='paid').length} facturas</div>
+    </div>
+    <div class="stat-card ${overdue>0?'red-card':''}">
+      <div class="stat-label">Vencidas sin cobrar</div>
+      <div class="stat-value" style="${overdue>0?'color:var(--red)':''}">${overdue}</div>
+      <div class="stat-sub">${overdue>0?'Requieren atención':'Sin retrasos'}</div>
+    </div>
+  </div>
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">Facturas recientes</span>
+      <button class="btn btn-primary btn-sm" onclick="navigate('new-invoice')">+ Nueva factura</button>
+    </div>
+    ${recent.length ? `<table><thead><tr><th>Nº</th><th>Cliente</th><th>Fecha</th><th>Vencimiento</th><th>Estado</th><th style="text-align:right">Total</th><th></th></tr></thead><tbody>
+    ${recent.map(inv=>{const c=getClient(inv.clientId);const t=calcTotals(inv.items,inv.taxRate,inv.irpfRate);return`<tr>
+      <td class="td-mono">${inv.number}</td>
+      <td style="font-weight:500">${c?c.name:'<span class="text-muted">—</span>'}</td>
+      <td class="text-muted text-sm">${fmtDate(inv.date)}</td>
+      <td class="text-muted text-sm">${fmtDate(inv.dueDate)}</td>
+      <td>${statusBadge(inv)}</td>
+      <td class="td-amount">${fmtMoney(t.total)}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="navigate('invoice-detail',{id:'${inv.id}'})">Ver →</button></td>
+    </tr>`;}).join('')}
+    </tbody></table>` : `<div class="empty"><div class="empty-title">Sin facturas todavía</div><div class="empty-sub">Crea tu primera factura para empezar.</div></div>`}
+  </div>`;
+}
+function actDashboard() { document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-primary btn-sm" onclick="navigate('new-invoice')">+ Nueva factura</button>`; }
+
+// ════════════════════════════════════════════
+// INVOICES LIST
+// ════════════════════════════════════════════
+function viewInvoices(p={}) {
+  const filter=p.filter||'all', search=p.search||'';
+  let invs=[...DB.invoices].sort((a,b)=>b.date>a.date?1:-1);
+  if(filter!=='all') invs=invs.filter(i=>getStatus(i)===filter);
+  if(search){const q=search.toLowerCase();invs=invs.filter(i=>{const c=getClient(i.clientId);return i.number.toLowerCase().includes(q)||(c&&c.name.toLowerCase().includes(q));});}
+  return `
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">Facturas (${invs.length})</span>
+      <div class="filter-bar">
+        <input class="filter-input" id="inv-search" placeholder="Buscar número o cliente..." value="${search}" oninput="navigate('invoices',{filter:'${filter}',search:this.value})"/>
+        <select class="filter-select" onchange="navigate('invoices',{filter:this.value,search:document.getElementById('inv-search')?.value||''})">
+          <option value="all" ${filter==='all'?'selected':''}>Todas</option>
+          <option value="pending" ${filter==='pending'?'selected':''}>Pendientes</option>
+          <option value="paid" ${filter==='paid'?'selected':''}>Cobradas</option>
+          <option value="overdue" ${filter==='overdue'?'selected':''}>Vencidas</option>
+          <option value="draft" ${filter==='draft'?'selected':''}>Borradores</option>
+        </select>
+      </div>
+    </div>
+    ${invs.length?`<table><thead><tr><th>Nº Factura</th><th>Cliente</th><th>Emisión</th><th>Vencimiento</th><th>Estado</th><th style="text-align:right">Base</th><th style="text-align:right">Total</th><th></th></tr></thead><tbody>
+    ${invs.map(inv=>{const c=getClient(inv.clientId);const t=calcTotals(inv.items,inv.taxRate,inv.irpfRate);const st=getStatus(inv);return`<tr>
+      <td class="td-mono">${inv.number}</td>
+      <td style="font-weight:500">${c?c.name:'—'}</td>
+      <td class="text-muted text-sm">${fmtDate(inv.date)}</td>
+      <td class="text-muted text-sm">${fmtDate(inv.dueDate)}</td>
+      <td>${statusBadge(inv)}</td>
+      <td class="td-amount text-muted">${fmtMoney(t.base)}</td>
+      <td class="td-amount">${fmtMoney(t.total)}</td>
+      <td><div class="td-actions">
+        <button class="btn btn-ghost btn-sm" onclick="navigate('invoice-detail',{id:'${inv.id}'})">Ver</button>
+        ${st!=='paid'?`<button class="btn btn-success btn-sm" onclick="markPaid('${inv.id}')">✓</button>`:''}
+        <button class="btn btn-danger btn-sm" onclick="deleteInvoice('${inv.id}')">×</button>
+      </div></td>
+    </tr>`;}).join('')}
+    </tbody></table>`:
+    `<div class="empty"><div class="empty-title">Sin resultados</div><div class="empty-sub">Prueba con otro filtro.</div></div>`}
+  </div>`;
+}
+function actInvoices() { document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-primary btn-sm" onclick="navigate('new-invoice')">+ Nueva factura</button>`; }
+function markPaid(id){const inv=getInvoice(id);if(inv){inv.status='paid';save();render();}}
+function deleteInvoice(id){if(!confirm('¿Eliminar esta factura?'))return;DB.invoices=DB.invoices.filter(i=>i.id!==id);save();render();}
+
+// ════════════════════════════════════════════
+// INVOICE FORM
+// ════════════════════════════════════════════
+let formItems=[{id:genId(),desc:'',qty:1,price:0}];
+
+function viewInvoiceForm(p={}) {
+  const defaults={ clientId:DB.clients[0]?.id||'', date:today(), dueDate:addDays(today(),30), taxRate:21, irpfRate:0, notes:'', status:'pending' };
+  const d=defaults;
+  const t=calcTotals(formItems,d.taxRate,d.irpfRate);
+  const itemsHtml=formItems.map(item=>`
+    <tr id="item-row-${item.id}">
+      <td><input class="item-input" placeholder="Descripción del servicio..." value="${item.desc}" onchange="updateItem('${item.id}','desc',this.value)"/></td>
+      <td style="width:70px"><input class="item-input mono" type="number" min="1" step="1" value="${item.qty}" onchange="updateItem('${item.id}','qty',this.value)" style="text-align:right"/></td>
+      <td style="width:110px"><input class="item-input mono" type="number" min="0" step="0.01" value="${item.price}" onchange="updateItem('${item.id}','price',this.value)" style="text-align:right"/></td>
+      <td class="item-total">${fmtMoney((parseFloat(item.qty)||0)*(parseFloat(item.price)||0))}</td>
+      <td style="width:30px"><button class="btn-remove-item" onclick="removeItem('${item.id}')">×</button></td>
+    </tr>`).join('');
+  return `
+  <div class="invoice-layout">
+    <div>
+      <div class="panel" style="margin-bottom:1rem"><div class="panel-body">
+        <div class="form-section-title">Datos de la factura</div>
+        <div class="form-row-3" style="margin-bottom:.875rem">
+          <div class="form-group"><label class="form-label">Cliente *</label>
+            <select class="form-input form-select" id="f-client">
+              <option value="">— Seleccionar —</option>
+              ${DB.clients.map(c=>`<option value="${c.id}" ${d.clientId===c.id?'selected':''}>${c.name}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Fecha emisión</label><input class="form-input" type="date" id="f-date" value="${d.date}"/></div>
+          <div class="form-group"><label class="form-label">Vencimiento</label><input class="form-input" type="date" id="f-due" value="${d.dueDate}"/></div>
+        </div>
+        <div class="form-row-3">
+          <div class="form-group"><label class="form-label">IVA (%)</label>
+            <select class="form-input form-select" id="f-tax" onchange="recalcForm()">
+              <option value="21">21%</option><option value="10">10%</option><option value="4">4%</option><option value="0">0%</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">IRPF (%)</label>
+            <select class="form-input form-select" id="f-irpf" onchange="recalcForm()">
+              <option value="0">Sin IRPF</option><option value="15">15%</option><option value="7">7%</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Estado</label>
+            <select class="form-input form-select" id="f-status">
+              <option value="pending">Pendiente</option><option value="paid">Cobrada</option><option value="draft">Borrador</option>
+            </select>
+          </div>
+        </div>
+      </div></div>
+      <div class="panel" style="margin-bottom:1rem">
+        <table class="items-table"><thead><tr>
+          <th>Descripción</th><th style="text-align:right">Cant.</th><th style="text-align:right">Precio unit.</th><th style="text-align:right">Total</th><th></th>
+        </tr></thead><tbody id="items-body">${itemsHtml}</tbody></table>
+        <div class="add-item-row"><button class="btn btn-ghost btn-sm" onclick="addItem()">+ Añadir línea</button></div>
+      </div>
+      <div class="panel"><div class="panel-body">
+        <div class="form-group"><label class="form-label">Notas / Forma de pago</label>
+          <textarea class="form-input form-textarea" id="f-notes" placeholder="Pago por transferencia bancaria a 30 días..."></textarea>
+        </div>
+      </div></div>
+    </div>
+    <div>
+      <div class="panel" style="margin-bottom:1rem">
+        <div class="totals-section">
+          <div class="form-section-title" style="margin-bottom:.875rem">Resumen</div>
+          <div class="total-row"><span class="total-label">Base imponible</span><span class="total-value" id="t-base">${fmtMoney(t.base)}</span></div>
+          <div class="total-row" id="t-row-tax"><span class="total-label">IVA (21%)</span><span class="total-value" id="t-tax">${fmtMoney(t.tax)}</span></div>
+          <div class="total-row" id="t-row-irpf" style="display:none"><span class="total-label">IRPF (0%)</span><span class="total-value" style="color:var(--red)" id="t-irpf">-${fmtMoney(0)}</span></div>
+          <div class="total-row divider grand"><span>TOTAL</span><span class="total-value" id="t-total">${fmtMoney(t.total)}</span></div>
+        </div>
+        <div style="padding:.875rem 1.25rem;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:.5rem">
+          <button class="btn btn-primary" onclick="saveInvoice()">Crear y guardar factura</button>
+          <button class="btn btn-ghost" onclick="navigate('invoices')">Cancelar</button>
+        </div>
+      </div>
+      ${DB.clients.length===0?`<div class="alert alert-warn">No tienes clientes aún. <a onclick="navigate('clients')" style="font-weight:600;cursor:pointer">Añade uno →</a></div>`:''}
+    </div>
+  </div>`;
+}
+function actNewInvoice(){
+  formItems=[{id:genId(),desc:'',qty:1,price:0}];
+  document.getElementById('topbar-actions').innerHTML='';
+}
+
+function updateItem(id,field,value){const item=formItems.find(i=>i.id===id);if(item){item[field]=value;recalcForm();}}
+function removeItem(id){formItems=formItems.filter(i=>i.id!==id);document.getElementById(`item-row-${id}`)?.remove();recalcForm();}
+function addItem(){
+  const item={id:genId(),desc:'',qty:1,price:0};formItems.push(item);
+  const tbody=document.getElementById('items-body');
+  if(tbody){const tr=document.createElement('tr');tr.id=`item-row-${item.id}`;
+  tr.innerHTML=`<td><input class="item-input" placeholder="Descripción..." value="" onchange="updateItem('${item.id}','desc',this.value)"/></td>
+    <td style="width:70px"><input class="item-input mono" type="number" min="1" value="1" onchange="updateItem('${item.id}','qty',this.value)" style="text-align:right"/></td>
+    <td style="width:110px"><input class="item-input mono" type="number" min="0" step="0.01" value="0" onchange="updateItem('${item.id}','price',this.value)" style="text-align:right"/></td>
+    <td class="item-total">0,00 €</td>
+    <td style="width:30px"><button class="btn-remove-item" onclick="removeItem('${item.id}')">×</button></td>`;
+  tbody.appendChild(tr);}
+}
+function recalcForm(){
+  const taxRate=parseFloat(document.getElementById('f-tax')?.value||21);
+  const irpfRate=parseFloat(document.getElementById('f-irpf')?.value||0);
+  const t=calcTotals(formItems,taxRate,irpfRate);
+  formItems.forEach(item=>{const cell=document.querySelector(`#item-row-${item.id} .item-total`);if(cell)cell.textContent=fmtMoney((parseFloat(item.qty)||0)*(parseFloat(item.price)||0));});
+  ['t-base','t-tax','t-total'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=id==='t-base'?fmtMoney(t.base):id==='t-tax'?fmtMoney(t.tax):fmtMoney(t.total);});
+  const irpfEl=document.getElementById('t-irpf');if(irpfEl)irpfEl.textContent='-'+fmtMoney(t.irpf);
+  const taxRow=document.getElementById('t-row-tax');if(taxRow)taxRow.querySelector('.total-label').textContent=`IVA (${taxRate}%)`;
+  const irpfRow=document.getElementById('t-row-irpf');if(irpfRow){irpfRow.style.display=irpfRate>0?'':'none';irpfRow.querySelector('.total-label').textContent=`IRPF (${irpfRate}%)`;}
+}
+function saveInvoice(){
+  const clientId=document.getElementById('f-client')?.value;
+  if(!clientId){alert('Selecciona un cliente.');return;}
+  if(!formItems.length){alert('Añade al menos una línea.');return;}
+  const inv={
+    id:genId(), number:invoiceNumber(),
+    clientId,
+    date:document.getElementById('f-date')?.value||today(),
+    dueDate:document.getElementById('f-due')?.value||addDays(today(),30),
+    taxRate:parseFloat(document.getElementById('f-tax')?.value||21),
+    irpfRate:parseFloat(document.getElementById('f-irpf')?.value||0),
+    notes:document.getElementById('f-notes')?.value||'',
+    status:document.getElementById('f-status')?.value||'pending',
+    items:formItems.map(i=>({...i}))
+  };
+  DB.invoices.push(inv);
+  DB.settings.nextNumber++;
+  save();
+  navigate('invoice-detail',{id:inv.id});
+}
+
+// ════════════════════════════════════════════
+// INVOICE DETAIL
+// ════════════════════════════════════════════
+function viewInvoiceDetail(p={}) {
+  const inv=getInvoice(p.id);
+  if(!inv)return`<div class="empty"><div class="empty-title">Factura no encontrada</div></div>`;
+  const client=getClient(inv.clientId);
+  const s=DB.settings;
+  const t=calcTotals(inv.items,inv.taxRate,inv.irpfRate);
+  return `
+  <div class="breadcrumb"><a onclick="navigate('invoices')">Facturas</a><span class="breadcrumb-sep">/</span><span>${inv.number}</span></div>
+  <div class="invoice-preview">
+    <div class="inv-header">
+      <div>
+        <div class="inv-company-name">${s.companyName}</div>
+        <div class="inv-company-details">${[s.cif?'CIF: '+s.cif:'',s.address,s.city,s.email,s.phone,s.web].filter(Boolean).join('<br>')}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="inv-label">Nº Factura</div>
+        <div class="inv-number">${inv.number}</div>
+        <div class="inv-meta">Emisión: <strong>${fmtDate(inv.date)}</strong><br>Vencimiento: <strong>${fmtDate(inv.dueDate)}</strong><br>${statusBadge(inv)}</div>
+      </div>
+    </div>
+    ${client?`<div class="inv-client-box">
+      <div class="inv-label">Facturado a</div>
+      <div class="inv-client-name">${client.name}</div>
+      <div class="inv-client-details">${[client.cif?'CIF: '+client.cif:'',client.address,client.email,client.phone].filter(Boolean).join(' · ')}</div>
+    </div>`:''}
+    <table class="inv-items-table">
+      <thead><tr><th>Descripción</th><th style="text-align:right;width:70px">Cant.</th><th style="text-align:right;width:110px">Precio</th><th style="text-align:right;width:110px">Total</th></tr></thead>
+      <tbody>${inv.items.map(item=>`<tr>
+        <td>${item.desc||'—'}</td>
+        <td style="text-align:right;font-family:var(--mono)">${parseFloat(item.qty)||0}</td>
+        <td style="text-align:right;font-family:var(--mono)">${fmtMoney(item.price)}</td>
+        <td style="text-align:right;font-family:var(--mono);font-weight:600">${fmtMoney((parseFloat(item.qty)||0)*(parseFloat(item.price)||0))}</td>
+      </tr>`).join('')}</tbody>
+    </table>
+    <div class="inv-totals">
+      <div class="inv-total-row"><span style="color:var(--muted)">Base imponible</span><span style="font-family:var(--mono)">${fmtMoney(t.base)}</span></div>
+      <div class="inv-total-row"><span style="color:var(--muted)">IVA (${inv.taxRate}%)</span><span style="font-family:var(--mono)">${fmtMoney(t.tax)}</span></div>
+      ${inv.irpfRate>0?`<div class="inv-total-row"><span style="color:var(--muted)">IRPF (${inv.irpfRate}%)</span><span style="font-family:var(--mono);color:var(--red)">-${fmtMoney(t.irpf)}</span></div>`:''}
+      <div class="inv-total-row grand"><span>TOTAL</span><span>${fmtMoney(t.total)}</span></div>
+    </div>
+    ${inv.notes?`<div class="inv-footer"><div class="inv-label" style="margin-bottom:.3rem">Notas</div>${inv.notes}</div>`:''}
+    ${s.iban?`<div class="inv-footer" style="border-top:none;padding-top:.3rem"><strong>IBAN:</strong> ${s.iban}</div>`:''}
+  </div>`;
+}
+function actInvoiceDetail(p={}) {
+  const inv=getInvoice(p.id);
+  if(!inv){document.getElementById('topbar-actions').innerHTML='';return;}
+  const st=getStatus(inv);
+  document.getElementById('topbar-actions').innerHTML=`<div style="display:flex;gap:.5rem">
+    ${st!=='paid'?`<button class="btn btn-success btn-sm" onclick="markPaid('${inv.id}');navigate('invoice-detail',{id:'${inv.id}'})">✓ Marcar cobrada</button>`:''}
+    <button class="btn btn-ghost btn-sm" onclick="generateInvoicePDF('${inv.id}')">↓ PDF</button>
+    <button class="btn btn-danger btn-sm" onclick="deleteInvoice('${inv.id}')">Eliminar</button>
+  </div>`;
+}
+
+// ════════════════════════════════════════════
+// CLIENTS
+// ════════════════════════════════════════════
+function viewClients() {
+  return `
+  <div class="table-card">
+    <div class="table-header"><span class="table-title">Clientes (${DB.clients.length})</span><button class="btn btn-primary btn-sm" onclick="openClientModal()">+ Nuevo cliente</button></div>
+    ${DB.clients.length?`<table><thead><tr><th>Nombre / Empresa</th><th>CIF/NIF</th><th>Email</th><th>Teléfono</th><th>Facturas</th><th></th></tr></thead><tbody>
+    ${DB.clients.map(c=>{const count=DB.invoices.filter(i=>i.clientId===c.id).length;return`<tr>
+      <td style="font-weight:500">${c.name}</td>
+      <td class="td-mono">${c.cif||'—'}</td>
+      <td class="text-muted">${c.email||'—'}</td>
+      <td class="text-muted">${c.phone||'—'}</td>
+      <td><span class="badge badge-draft">${count}</span></td>
+      <td><div class="td-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openClientModal('${c.id}')">Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteClient('${c.id}')">×</button>
+      </div></td>
+    </tr>`;}).join('')}
+    </tbody></table>`:
+    `<div class="empty"><div class="empty-title">Sin clientes</div><div class="empty-sub">Añade un cliente para poder crear facturas.</div></div>`}
+  </div>`;
+}
+function actClients(){document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-primary btn-sm" onclick="openClientModal()">+ Nuevo cliente</button>`;}
+
+function openClientModal(id) {
+  const c=id?DB.clients.find(cl=>cl.id===id):null;
+  document.getElementById('modal-container').innerHTML=`
+  <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-header"><span class="modal-title">${c?'Editar cliente':'Nuevo cliente'}</span><button class="modal-close" onclick="closeModal()">×</button></div>
+      <div class="modal-body"><div class="form-grid">
+        <div class="form-group"><label class="form-label">Nombre / Empresa *</label><input class="form-input" id="cl-name" value="${c?.name||''}" placeholder="Empresa S.L."/></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">CIF / NIF</label><input class="form-input" id="cl-cif" value="${c?.cif||''}" placeholder="B12345678"/></div>
+          <div class="form-group"><label class="form-label">Teléfono</label><input class="form-input" id="cl-phone" value="${c?.phone||''}" placeholder="+34 600 000 000"/></div>
+        </div>
+        <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="cl-email" type="email" value="${c?.email||''}" placeholder="contacto@empresa.com"/></div>
+        <div class="form-group"><label class="form-label">Dirección</label><input class="form-input" id="cl-address" value="${c?.address||''}" placeholder="Calle, número, ciudad"/></div>
+      </div></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveClient('${id||''}')">${c?'Guardar cambios':'Añadir cliente'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+function saveClient(existingId){
+  const name=document.getElementById('cl-name')?.value.trim();
+  if(!name){alert('El nombre es obligatorio.');return;}
+  const data={name,cif:document.getElementById('cl-cif')?.value.trim()||'',phone:document.getElementById('cl-phone')?.value.trim()||'',email:document.getElementById('cl-email')?.value.trim()||'',address:document.getElementById('cl-address')?.value.trim()||''};
+  if(existingId){const c=DB.clients.find(cl=>cl.id===existingId);if(c)Object.assign(c,data);}
+  else DB.clients.push({id:genId(),...data});
+  save();closeModal();render();
+}
+function deleteClient(id){if(!confirm('¿Eliminar este cliente?'))return;DB.clients=DB.clients.filter(c=>c.id!==id);save();render();}
+function closeModal(){document.getElementById('modal-container').innerHTML='';}
+
+// ════════════════════════════════════════════
+// SETTINGS
+// ════════════════════════════════════════════
+function viewSettings(){
+  const s=DB.settings;
+  return `
+  <div class="settings-grid">
+    <div class="settings-card" style="grid-column:1/-1">
+      <div class="settings-card-title">Datos de tu empresa / autónomo</div>
+      <div class="form-grid">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Nombre / Razón social *</label><input class="form-input" id="s-name" value="${s.companyName}"/></div>
+          <div class="form-group"><label class="form-label">CIF / NIF</label><input class="form-input" id="s-cif" value="${s.cif}" placeholder="00000000X"/></div>
+        </div>
+        <div class="form-group"><label class="form-label">Dirección</label><input class="form-input" id="s-address" value="${s.address}" placeholder="Calle, número"/></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Ciudad / Provincia</label><input class="form-input" id="s-city" value="${s.city||''}" placeholder="Madrid, España"/></div>
+          <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="s-email" value="${s.email}"/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Teléfono</label><input class="form-input" id="s-phone" value="${s.phone}"/></div>
+          <div class="form-group"><label class="form-label">Web / Portfolio</label><input class="form-input" id="s-web" value="${s.web||''}"/></div>
+        </div>
+        <div class="form-group"><label class="form-label">IBAN (datos bancarios)</label><input class="form-input" id="s-iban" value="${s.iban}" placeholder="ES00 0000 0000 0000 0000 0000"/></div>
+      </div>
+    </div>
+    <div class="settings-card">
+      <div class="settings-card-title">Numeración</div>
+      <div class="form-group" style="margin-bottom:.875rem"><label class="form-label">Próximo número</label><input class="form-input" id="s-next" type="number" min="1" value="${s.nextNumber}"/></div>
+      <div class="form-group"><label class="form-label">Año</label><input class="form-input" id="s-year" type="number" value="${s.year}"/></div>
+      <div class="text-muted text-sm mt-1" style="margin-top:.75rem">Próxima: <strong style="font-family:var(--mono)">FAC-${s.year}-${String(s.nextNumber).padStart(3,'0')}</strong></div>
+    </div>
+    <div class="settings-card" style="display:flex;align-items:flex-end">
+      <div style="width:100%">
+        <button class="btn btn-primary" style="width:100%" onclick="saveSettings()">Guardar configuración</button>
+        <div id="settings-ok" style="display:none;margin-top:.625rem" class="alert alert-success">✓ Configuración guardada.</div>
+      </div>
+    </div>
+  </div>`;
+}
+function actSettings(){document.getElementById('topbar-actions').innerHTML='';}
+function saveSettings(){
+  DB.settings.companyName=document.getElementById('s-name')?.value.trim()||DB.settings.companyName;
+  DB.settings.cif=document.getElementById('s-cif')?.value.trim()||'';
+  DB.settings.address=document.getElementById('s-address')?.value.trim()||'';
+  DB.settings.city=document.getElementById('s-city')?.value.trim()||'';
+  DB.settings.email=document.getElementById('s-email')?.value.trim()||'';
+  DB.settings.phone=document.getElementById('s-phone')?.value.trim()||'';
+  DB.settings.web=document.getElementById('s-web')?.value.trim()||'';
+  DB.settings.iban=document.getElementById('s-iban')?.value.trim()||'';
+  DB.settings.nextNumber=parseInt(document.getElementById('s-next')?.value)||DB.settings.nextNumber;
+  DB.settings.year=parseInt(document.getElementById('s-year')?.value)||DB.settings.year;
+  save();
+  const ok=document.getElementById('settings-ok');if(ok){ok.style.display='block';setTimeout(()=>ok.style.display='none',2500);}
+}
+
+// ════════════════════════════════════════════
+// PDF GENERATOR
+// ════════════════════════════════════════════
+function generateInvoicePDF(invId) {
+  const inv=getInvoice(invId); if(!inv)return;
+  const client=getClient(inv.clientId);
+  const s=DB.settings;
+  const t=calcTotals(inv.items,inv.taxRate,inv.irpfRate);
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210,H=297,ml=18,mr=18,cw=W-ml-mr;
+  const DARK=[28,25,23],MUTED=[120,113,108],BORDER=[231,229,228],ACCENT=[180,83,9],BG=[250,250,249],GREEN=[21,128,61],RED=[185,28,28];
+  let y=0;
+
+  // Header
+  doc.setFillColor(...BG); doc.rect(0,0,W,52,'F');
+  doc.setDrawColor(...BORDER); doc.setLineWidth(0.3); doc.line(0,52,W,52);
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(...DARK);
+  doc.text(s.companyName||'Mi Empresa',ml,18);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
+  let cy2=24;
+  if(s.cif){doc.text(`CIF: ${s.cif}`,ml,cy2);cy2+=4.5;}
+  if(s.address){doc.text(s.address,ml,cy2);cy2+=4.5;}
+  if(s.city){doc.text(s.city,ml,cy2);cy2+=4.5;}
+  if(s.email){doc.text(s.email,ml,cy2);cy2+=4.5;}
+  if(s.phone){doc.text(s.phone,ml,cy2);}
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...MUTED);
+  doc.text('FACTURA',W-mr,13,{align:'right'});
+  doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(...ACCENT);
+  doc.text(inv.number,W-mr,23,{align:'right'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
+  doc.text(`Fecha: ${fmtDate(inv.date)}`,W-mr,30,{align:'right'});
+  doc.text(`Vencimiento: ${fmtDate(inv.dueDate)}`,W-mr,35,{align:'right'});
+  const stMap={pending:'PENDIENTE',paid:'COBRADA',overdue:'VENCIDA',draft:'BORRADOR'};
+  const stColorMap={pending:ACCENT,paid:GREEN,overdue:RED,draft:MUTED};
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(...(stColorMap[getStatus(inv)]||MUTED));
+  doc.text(stMap[getStatus(inv)]||'',W-mr,42,{align:'right'});
+
+  y=62;
+  if(client){
+    doc.setFillColor(...BG); doc.setDrawColor(...BORDER); doc.setLineWidth(0.3);
+    doc.roundedRect(ml,y,cw,26,1,1,'FD');
+    doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+    doc.text('FACTURADO A',ml+4,y+5.5);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(...DARK);
+    doc.text(client.name,ml+4,y+12);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
+    const parts=[client.cif?`CIF: ${client.cif}`:'',client.address,client.email,client.phone].filter(Boolean);
+    doc.text(parts.join('  ·  '),ml+4,y+18);
+    y+=34;
+  } else {y+=8;}
+
+  // Items table header
+  doc.setFillColor(...DARK); doc.rect(ml,y,cw,9,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(255,255,255);
+  doc.text('Descripción',ml+4,y+6);
+  doc.text('Cant.',ml+cw*0.70,y+6,{align:'right'});
+  doc.text('Precio unit.',ml+cw*0.845,y+6,{align:'right'});
+  doc.text('Total',ml+cw,y+6,{align:'right'});
+  y+=9;
+
+  inv.items.forEach((item,i)=>{
+    const lineTotal=(parseFloat(item.qty)||0)*(parseFloat(item.price)||0);
+    doc.setFillColor(...(i%2===0?[255,255,255]:BG)); doc.rect(ml,y,cw,9,'F');
+    doc.setDrawColor(...BORDER); doc.setLineWidth(0.2); doc.line(ml,y+9,ml+cw,y+9);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...DARK);
+    doc.text((item.desc||'—').slice(0,55),ml+4,y+6);
+    doc.setTextColor(...MUTED);
+    doc.text(String(parseFloat(item.qty)||0),ml+cw*0.70,y+6,{align:'right'});
+    doc.text(fmtMoney(item.price),ml+cw*0.845,y+6,{align:'right'});
+    doc.setFont('helvetica','bold'); doc.setTextColor(...DARK);
+    doc.text(fmtMoney(lineTotal),ml+cw,y+6,{align:'right'});
+    y+=9;
+  });
+
+  y+=6;
+  const totX=ml+cw-75;
+  const drow=(label,value,bold=false,color=null)=>{
+    doc.setFont('helvetica',bold?'bold':'normal'); doc.setFontSize(bold?9:8.5);
+    doc.setTextColor(...(color||(bold?DARK:MUTED))); doc.text(label,totX,y+5);
+    doc.setTextColor(...(color||(bold?ACCENT:MUTED))); doc.text(value,ml+cw,y+5,{align:'right'});
+    y+=6.5;
+  };
+  drow('Base imponible',fmtMoney(t.base));
+  drow(`IVA (${inv.taxRate}%)`,fmtMoney(t.tax));
+  if(inv.irpfRate>0)drow(`IRPF (${inv.irpfRate}%)`,`-${fmtMoney(t.irpf)}`,false,RED);
+  doc.setDrawColor(...BORDER); doc.setLineWidth(0.5); doc.line(totX,y,ml+cw,y); y+=4;
+  drow('TOTAL',fmtMoney(t.total),true);
+  y+=8;
+
+  if(inv.notes||s.iban){
+    doc.setDrawColor(...BORDER); doc.setLineWidth(0.3); doc.line(ml,y,ml+cw,y); y+=6;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
+    if(inv.notes){const nl=doc.splitTextToSize(inv.notes,cw);doc.text(nl,ml,y);y+=nl.length*4.5+3;}
+    if(s.iban){doc.setFont('helvetica','bold');doc.setTextColor(...DARK);doc.text('IBAN: ',ml,y);doc.setFont('helvetica','normal');doc.setTextColor(...MUTED);doc.text(s.iban,ml+12,y);}
+  }
+
+  // Footer
+  doc.setFillColor(...BG); doc.rect(0,H-14,W,14,'F');
+  doc.setDrawColor(...BORDER); doc.setLineWidth(0.3); doc.line(0,H-14,W,H-14);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(...MUTED);
+  doc.text(`${s.companyName} · ${s.email}`,ml,H-7);
+  doc.text(inv.number,W-mr,H-7,{align:'right'});
+  doc.setFontSize(6.5); doc.text('Factura conforme al art. 6 del RD 1619/2012 de facturación',W/2,H-4,{align:'center'});
+
+  doc.save(`${inv.number}.pdf`);
+}
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+navigate('dashboard');
+</script>
+</body>
+</html>
