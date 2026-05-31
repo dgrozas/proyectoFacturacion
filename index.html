@@ -225,8 +225,6 @@ tr:hover td{background:#fafaf9}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
 /* ── Org setup screen ─────────────────────── */
-#org-setup-screen{position:fixed;inset:0;background:#0d0d10;z-index:800;display:flex;align-items:center;justify-content:center;flex-direction:column}
-#org-setup-screen.hidden{display:none}
 .org-setup-card{background:#18181b;border:1px solid #27272a;border-radius:8px;padding:2.5rem;width:100%;max-width:420px}
 .org-setup-title{font-size:1.1rem;font-weight:700;color:#fff;margin-bottom:.3rem}
 .org-setup-sub{font-size:.8rem;color:#71717a;margin-bottom:1.75rem;line-height:1.5}
@@ -438,7 +436,6 @@ function logout() {
   allOrgs = [];
   DB = { clients: [], invoices: [], settings: { ...DEFAULT_SETTINGS } };
   document.getElementById('app-shell').classList.add('hidden');
-  document.getElementById('org-setup-screen').classList.add('hidden');
   document.getElementById('login-screen').classList.remove('hidden');
   document.getElementById('auth-password').value = '';
   // Reset admin nav
