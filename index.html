@@ -1041,7 +1041,17 @@ function generateInvoicePDF(invId) {
 // ════════════════════════════════════════════════════════════
 // ADMIN PANEL
 // ════════════════════════════════════════════════════════════
+async function loadAdminOrgs() {
+  try {
+    const {data, error} = await sb.rpc('get_all_orgs_for_admin');
+    if (error) throw error;
+    allOrgs = data || [];
+    render();
+  } catch(e) { toast('Error al cargar empresas: ' + e.message, 'error'); }
+}
+
 function viewAdmin() {
+  if (allOrgs.length === 0 && isGlobalAdmin) loadAdminOrgs();
   const viewing = currentOrgId ? allOrgs.find(o=>o.id===currentOrgId) : null;
   const orgRows = allOrgs.map(org => `
     <div class="org-card ${org.id===currentOrgId?'org-card-active':''}">
@@ -1207,7 +1217,8 @@ async function deleteOrg(orgId, orgName) {
 
 async function refreshAdminOrgs() {
   try {
-    const {data} = await sb.from('organizations').select('*').order('created_at',{ascending:false});
+    const {data, error} = await sb.rpc('get_all_orgs_for_admin');
+    if (error) throw error;
     allOrgs = data || [];
     render();
     toast('Lista actualizada.', 'success');
@@ -1256,12 +1267,7 @@ async function checkUserSetup() {
 
     if (isGlobalAdmin) {
       console.log('3. Cargando organizaciones...');
-      const {data: orgs, error: orgsErr} = await sb.rpc('get_all_orgs_for_admin');
-
-      if (orgsErr) console.error('Error orgs:', orgsErr.message);
-      allOrgs = orgs || [];
-      console.log('4. Orgs cargadas:', allOrgs.length);
-
+      console.log('4. Admin confirmado — entrando sin precargar orgs');
       document.getElementById('nav-admin').style.display = 'flex';
       document.getElementById('nav-admin-sep').style.display = 'block';
       done(); showApp(); return;
