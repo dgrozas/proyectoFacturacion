@@ -11,14 +11,31 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --sidebar:#18181b; --sidebar-hover:#27272a; --sidebar-active:#f59e0b;
-  --sidebar-text:#a1a1aa; --bg:#fafaf9; --surface:#ffffff; --border:#e7e5e4;
-  --border-2:#d6d3d1; --text:#1c1917; --muted:#78716c; --light:#a8a29e;
-  --accent:#b45309; --accent-bg:#fffbeb; --accent-border:#fcd34d;
-  --green:#15803d; --green-bg:#f0fdf4; --green-border:#bbf7d0;
-  --red:#b91c1c; --red-bg:#fef2f2; --red-border:#fecaca;
-  --mono:'Courier New',Courier,monospace; --font:'Inter',system-ui,sans-serif; --radius:4px;
+:root,[data-theme="light"]{
+  --sidebar:#1e1b4b; --sidebar-hover:#312e81; --sidebar-active:#818cf8;
+  --sidebar-text:#a5b4fc; --sidebar-sub:#6366f1;
+  --bg:#f8fafc; --surface:#ffffff; --border:#e2e8f0;
+  --border-2:#cbd5e1; --text:#0f172a; --muted:#64748b; --light:#94a3b8;
+  --accent:#4f46e5; --accent-hover:#4338ca; --accent-bg:#eef2ff; --accent-border:#c7d2fe;
+  --green:#16a34a; --green-bg:#f0fdf4; --green-border:#bbf7d0;
+  --red:#dc2626; --red-bg:#fef2f2; --red-border:#fecaca;
+  --orange:#ea580c; --orange-bg:#fff7ed; --orange-border:#fed7aa;
+  --card-shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --card-shadow-hover:0 4px 12px rgba(0,0,0,.1);
+  --mono:'Courier New',Courier,monospace; --font:'Inter',system-ui,sans-serif; --radius:6px;
+}
+[data-theme="dark"]{
+  --sidebar:#0f0f1a; --sidebar-hover:#1e1b4b; --sidebar-active:#818cf8;
+  --sidebar-text:#a5b4fc; --sidebar-sub:#6366f1;
+  --bg:#0f172a; --surface:#1e293b; --border:#334155; 
+  --border-2:#475569; --text:#f1f5f9; --muted:#94a3b8; --light:#64748b;
+  --accent:#818cf8; --accent-hover:#6366f1; --accent-bg:#1e1b4b; --accent-border:#3730a3;
+  --green:#4ade80; --green-bg:#052e16; --green-border:#166534;
+  --red:#f87171; --red-bg:#450a0a; --red-border:#7f1d1d;
+  --orange:#fb923c; --orange-bg:#431407; --orange-border:#9a3412;
+  --card-shadow:0 1px 3px rgba(0,0,0,.3);
+  --card-shadow-hover:0 4px 12px rgba(0,0,0,.5);
+  --mono:'Courier New',Courier,monospace; --font:'Inter',system-ui,sans-serif; --radius:6px;
 }
 html{font-size:14px}
 body{font-family:var(--font);background:var(--bg);color:var(--text);display:flex;min-height:100vh;line-height:1.5}
@@ -27,21 +44,21 @@ button{font-family:var(--font);cursor:pointer}
 input,select,textarea{font-family:var(--font)}
 
 /* ── Login screen ─────────────────────────── */
-#login-screen{position:fixed;inset:0;background:#0d0d10;z-index:1000;display:flex;align-items:center;justify-content:center;flex-direction:column}
+#login-screen{position:fixed;inset:0;background:linear-gradient(135deg,#0f0f1a 0%,#1e1b4b 50%,#0f0f1a 100%);z-index:1000;display:flex;align-items:center;justify-content:center;flex-direction:column}
 #login-screen.hidden{display:none}
-.login-card{background:#18181b;border:1px solid #27272a;border-radius:8px;padding:2.5rem;width:100%;max-width:380px}
-.login-logo{font-size:1.4rem;font-weight:700;letter-spacing:.12em;color:#fff;margin-bottom:.25rem}
-.login-logo span{color:#f59e0b;font-size:1.7rem;line-height:.7;vertical-align:bottom}
+.login-card{background:#1e1b4b;border:1px solid rgba(129,140,248,.2);border-radius:12px;padding:2.5rem;width:100%;max-width:380px;box-shadow:0 25px 60px rgba(0,0,0,.5)}
+.login-logo{font-size:1.6rem;font-weight:900;letter-spacing:.12em;color:#fff;margin-bottom:.25rem}
+.login-logo span{color:#818cf8;font-size:1.9rem;line-height:.7;vertical-align:bottom}
 .login-subtitle{font-size:.78rem;color:#71717a;margin-bottom:2rem}
 .login-tabs{display:flex;background:#27272a;border-radius:4px;padding:3px;margin-bottom:1.5rem}
 .login-tab{flex:1;text-align:center;padding:.45rem;font-size:.78rem;font-weight:600;color:#71717a;cursor:pointer;border-radius:3px;border:none;background:none}
 .login-tab.active{background:#0d0d10;color:#f59e0b}
 .login-field{margin-bottom:1rem}
 .login-field label{display:block;font-size:.7rem;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.35rem}
-.login-field input{width:100%;background:#27272a;border:1px solid #3f3f46;border-radius:4px;color:#fff;padding:.6rem .75rem;font-size:.88rem;transition:border-color .12s}
-.login-field input:focus{outline:none;border-color:#f59e0b}
-.login-btn{width:100%;background:#f59e0b;color:#0d0d10;border:none;border-radius:4px;padding:.7rem;font-size:.9rem;font-weight:700;cursor:pointer;transition:background .12s;margin-top:.5rem}
-.login-btn:hover{background:#d97706}
+.login-field input{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(129,140,248,.2);border-radius:6px;color:#fff;padding:.65rem .875rem;font-size:.88rem;transition:all .2s}
+.login-field input:focus{outline:none;border-color:#818cf8;background:rgba(129,140,248,.08);box-shadow:0 0 0 3px rgba(129,140,248,.15)}
+.login-btn{width:100%;background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;border:none;border-radius:6px;padding:.75rem;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .2s;margin-top:.5rem;box-shadow:0 4px 15px rgba(99,102,241,.4)}
+.login-btn:hover{background:linear-gradient(135deg,#4338ca,#4f46e5);box-shadow:0 6px 20px rgba(99,102,241,.5);transform:translateY(-1px)}
 .login-btn:disabled{background:#3f3f46;color:#71717a;cursor:not-allowed}
 .login-error{background:#450a0a;border:1px solid #7f1d1d;color:#fca5a5;border-radius:4px;padding:.6rem .75rem;font-size:.8rem;margin-top:.875rem;display:none}
 .login-error.show{display:block}
@@ -56,28 +73,29 @@ input,select,textarea{font-family:var(--font)}
 #app-shell.hidden{display:none}
 
 /* ── Sidebar ──────────────────────────────── */
-.sidebar{width:220px;flex-shrink:0;background:var(--sidebar);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;border-right:1px solid #27272a}
-.sidebar-logo{padding:1.5rem 1.25rem 1.25rem;border-bottom:1px solid #27272a}
-.logo-mark{font-size:1.05rem;font-weight:700;letter-spacing:.12em;color:#ffffff;display:flex;align-items:baseline;gap:.2rem}
-.logo-dot{color:var(--sidebar-active);font-size:1.35rem;line-height:.8}
-.logo-sub{font-size:.62rem;color:#52525b;font-weight:500;letter-spacing:.08em;text-transform:uppercase;margin-top:.2rem}
-.sidebar-nav{flex:1;padding:.75rem 0}
-.nav-item{display:flex;align-items:center;gap:.75rem;padding:.6rem 1.25rem;font-size:.82rem;font-weight:500;color:var(--sidebar-text);cursor:pointer;transition:background .12s,color .12s;border-left:2px solid transparent;user-select:none}
-.nav-item:hover{background:var(--sidebar-hover);color:#d4d4d8}
-.nav-item.active{color:var(--sidebar-active);background:rgba(245,158,11,.07);border-left-color:var(--sidebar-active)}
-.nav-icon{width:16px;height:16px;opacity:.7;flex-shrink:0}
+.sidebar{width:232px;flex-shrink:0;background:var(--sidebar);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;border-right:1px solid rgba(255,255,255,.06)}
+.sidebar-logo{padding:1.5rem 1.25rem 1.1rem;border-bottom:1px solid rgba(255,255,255,.06)}
+.logo-mark{font-size:1.1rem;font-weight:800;letter-spacing:.1em;color:#ffffff;display:flex;align-items:baseline;gap:.2rem}
+.logo-dot{color:var(--sidebar-active);font-size:1.4rem;line-height:.8}
+.logo-sub{font-size:.6rem;color:rgba(255,255,255,.3);font-weight:500;letter-spacing:.1em;text-transform:uppercase;margin-top:.25rem}
+.sidebar-nav{flex:1;padding:.5rem 0;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:.75rem;padding:.62rem 1.25rem;font-size:.8rem;font-weight:500;color:var(--sidebar-text);cursor:pointer;transition:all .15s;border-left:2px solid transparent;user-select:none;border-radius:0 6px 6px 0;margin:1px .5rem 1px 0}
+.nav-item:hover{background:rgba(255,255,255,.06);color:#e2e8f0}
+.nav-item.active{color:var(--sidebar-active);background:rgba(129,140,248,.12);border-left-color:var(--sidebar-active);font-weight:600}
+.nav-icon{width:15px;height:15px;opacity:.6;flex-shrink:0;transition:opacity .15s}
+.nav-item:hover .nav-icon{opacity:.85}
 .nav-item.active .nav-icon{opacity:1}
-.sidebar-footer{padding:1rem 1.25rem;border-top:1px solid #27272a;font-size:.7rem;color:#52525b;line-height:1.6}
-.sidebar-user{font-size:.72rem;color:#71717a;margin-bottom:.35rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.btn-logout{background:none;border:1px solid #3f3f46;color:#71717a;font-size:.7rem;padding:.3rem .6rem;border-radius:3px;cursor:pointer;width:100%;margin-top:.4rem;transition:all .12s}
-.btn-logout:hover{border-color:#71717a;color:#a1a1aa}
+.sidebar-footer{padding:.875rem 1.25rem;border-top:1px solid rgba(255,255,255,.06);font-size:.68rem;color:rgba(255,255,255,.25);line-height:1.6}
+.sidebar-user{font-size:.72rem;color:rgba(255,255,255,.45);margin-bottom:.3rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn-logout{background:none;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.35);font-size:.7rem;padding:.3rem .6rem;border-radius:4px;cursor:pointer;width:100%;margin-top:.4rem;transition:all .15s;font-family:var(--font)}
+.btn-logout:hover{border-color:rgba(255,255,255,.25);color:rgba(255,255,255,.65);background:rgba(255,255,255,.05)}
 
 /* ── Main ─────────────────────────────────── */
-.main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh}
-.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:.875rem 2rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
-.topbar-title{font-size:.95rem;font-weight:600;color:var(--text)}
-.topbar-actions{display:flex;gap:.625rem;align-items:center}
-.content{padding:1.75rem 2rem;flex:1}
+.main{margin-left:232px;flex:1;display:flex;flex-direction:column;min-height:100vh;background:var(--bg)}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:.875rem 2rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;backdrop-filter:blur(8px)}
+.topbar-title{font-size:1rem;font-weight:700;color:var(--text)}
+.topbar-actions{display:flex;gap:.5rem;align-items:center}
+.content{padding:2rem 2.25rem;flex:1;max-width:1400px}
 
 /* ── Loading ──────────────────────────────── */
 #loading-overlay{position:fixed;inset:0;background:#0d0d10;z-index:900;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem}
@@ -94,11 +112,11 @@ input,select,textarea{font-family:var(--font)}
 @keyframes slideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 /* ── Buttons ──────────────────────────────── */
-.btn{display:inline-flex;align-items:center;gap:.4rem;border-radius:var(--radius);font-size:.8rem;font-weight:500;padding:.5rem 1rem;border:1px solid transparent;transition:all .12s;white-space:nowrap}
-.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
-.btn-primary:hover{background:#92400e}
+.btn{display:inline-flex;align-items:center;gap:.4rem;border-radius:var(--radius);font-size:.8rem;font-weight:600;padding:.5rem 1rem;border:1px solid transparent;transition:all .15s;white-space:nowrap;letter-spacing:.01em}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 1px 2px rgba(79,70,229,.2)}
+.btn-primary:hover{background:var(--accent-hover);box-shadow:0 2px 8px rgba(79,70,229,.3);transform:translateY(-1px)}
 .btn-ghost{background:transparent;color:var(--muted);border-color:var(--border)}
-.btn-ghost:hover{border-color:var(--border-2);color:var(--text)}
+.btn-ghost:hover{border-color:var(--border-2);color:var(--text);background:var(--accent-bg)}
 .btn-danger{background:transparent;color:var(--red);border-color:#fecaca}
 .btn-danger:hover{background:var(--red-bg)}
 .btn-sm{padding:.35rem .75rem;font-size:.75rem}
@@ -108,7 +126,8 @@ input,select,textarea{font-family:var(--font)}
 /* ── Stats ────────────────────────────────── */
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.75rem}
 .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.25rem}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.5rem;box-shadow:var(--card-shadow);transition:box-shadow .2s}
+.stat-card:hover{box-shadow:var(--card-shadow-hover)}
 .stat-label{font-size:.68rem;font-weight:600;color:var(--light);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.35rem}
 .stat-value{font-size:1.5rem;font-weight:700;color:var(--text);font-family:var(--mono);letter-spacing:-.02em}
 .stat-sub{font-size:.72rem;color:var(--muted);margin-top:.2rem}
@@ -117,9 +136,9 @@ input,select,textarea{font-family:var(--font)}
 .stat-card.red-card{border-left:3px solid var(--red)}
 
 /* ── Tables ───────────────────────────────── */
-.table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
-.table-header{padding:.875rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
-.table-title{font-size:.82rem;font-weight:600}
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--card-shadow);transition:box-shadow .2s}
+.table-header{padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem;background:var(--surface)}
+.table-title{font-size:.85rem;font-weight:700;color:var(--text)}
 table{width:100%;border-collapse:collapse}
 th{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--light);padding:.6rem 1rem;text-align:left;background:#fafaf9;border-bottom:1px solid var(--border)}
 td{padding:.7rem 1rem;font-size:.82rem;border-bottom:1px solid var(--border);vertical-align:middle}
@@ -309,11 +328,15 @@ tr:hover td{background:#fafaf9}
       </div>
       <div class="nav-item" data-view="clients" onclick="navigate('clients')">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        Clientes
+        Mis clientes
       </div>
       <div class="nav-item" data-view="expenses" onclick="navigate('expenses')">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         Gastos
+      </div>
+      <div class="nav-item" data-view="reports" onclick="navigate('reports')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Informes
       </div>
       <div class="nav-item" data-view="settings" onclick="navigate('settings')">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -378,7 +401,7 @@ let allOrgs = []; // only populated for global admin
 
 const DEFAULT_SETTINGS = {
   companyName: '', cif: '', address: '', city: '',
-  email: '', phone: '', iban: '', web: '', logo: '', invoicePrefix: 'FAC', nextNumber: 1,
+  email: '', phone: '', iban: '', web: '', logo: '', invoicePrefix: 'FAC', theme: 'light', nextNumber: 1,
   year: new Date().getFullYear()
 };
 
@@ -551,8 +574,8 @@ async function persistDeleteExpense(id) {
 async function persistSettings(s) {
   if (demoMode || IS_DEMO) { saveDemo(); return; }
   try {
-    const row = { user_id: currentUser.id, company_name: s.companyName, cif: s.cif, address: s.address, city: s.city, email: s.email, phone: s.phone, iban: s.iban, web: s.web, logo: s.logo||'', invoice_prefix: s.invoicePrefix||'FAC', next_number: s.nextNumber, year: s.year, organization_id: currentOrgId };
-    await sb.from('settings').upsert(row, { onConflict: 'user_id' });
+    const row = { user_id: currentUser.id, company_name: s.companyName, cif: s.cif, address: s.address, city: s.city, email: s.email, phone: s.phone, iban: s.iban, web: s.web, logo: s.logo||'', invoice_prefix: s.invoicePrefix||'FAC', theme: s.theme||'light', next_number: s.nextNumber, year: s.year, organization_id: currentOrgId };
+    await sb.from('settings').upsert(row, { onConflict: currentOrgId ? 'organization_id' : 'user_id' });
   } catch(e) { toast('Error al guardar configuración.', 'error'); }
 }
 
@@ -597,7 +620,7 @@ function pendingTotal() {
 // ROUTER
 // ════════════════════════════════════════════════════════════
 let currentView='dashboard', currentParams={};
-const VIEW_TITLES={dashboard:'Dashboard',invoices:'Facturas','new-invoice':'Nueva factura','invoice-detail':'Detalle de factura',clients:'Clientes',expenses:'Gastos',settings:'Configuración',admin:'Panel Admin'};
+const VIEW_TITLES={dashboard:'Dashboard',invoices:'Facturas','new-invoice':'Nueva factura','invoice-detail':'Detalle de factura',clients:'Mis clientes',expenses:'Gastos',reports:'Informes y análisis',settings:'Configuración',admin:'Panel Admin'};
 
 function navigate(view,params={}) {
   currentView=view; currentParams=params;
@@ -606,10 +629,10 @@ function navigate(view,params={}) {
 }
 function render() {
   document.getElementById('topbar-title').textContent=VIEW_TITLES[currentView]||'';
-  const views={dashboard:viewDashboard,invoices:viewInvoices,'new-invoice':viewInvoiceForm,'invoice-detail':viewInvoiceDetail,clients:viewClients,expenses:viewExpenses,settings:viewSettings,admin:viewAdmin};
+  const views={dashboard:viewDashboard,invoices:viewInvoices,'new-invoice':viewInvoiceForm,'invoice-detail':viewInvoiceDetail,clients:viewClients,expenses:viewExpenses,reports:viewReports,settings:viewSettings,admin:viewAdmin};
   const fn=views[currentView];
   document.getElementById('app-content').innerHTML=fn?fn(currentParams):'';
-  const acts={dashboard:actDashboard,invoices:actInvoices,'new-invoice':actNewInvoice,'invoice-detail':actInvoiceDetail,clients:actClients,expenses:actExpenses,settings:actSettings,admin:actAdmin};
+  const acts={dashboard:actDashboard,invoices:actInvoices,'new-invoice':actNewInvoice,'invoice-detail':actInvoiceDetail,clients:actClients,expenses:actExpenses,reports:actReports,settings:actSettings,admin:actAdmin};
   const af=acts[currentView];
   if(af)af(currentParams); else document.getElementById('topbar-actions').innerHTML='';
 }
@@ -1026,6 +1049,22 @@ function viewSettings(){
       <canvas id="logo-canvas" style="display:none"></canvas>
     </div>
     <div class="settings-card">
+      <div class="settings-card-title">Apariencia</div>
+      <div class="form-group" style="margin-bottom:1rem">
+        <label class="form-label">Tema de la aplicación</label>
+        <div style="display:flex;gap:.75rem;margin-top:.5rem">
+          <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;padding:.6rem 1rem;border:2px solid ${DB.settings.theme==='light'?'var(--accent)':'var(--border)'};border-radius:6px;flex:1;transition:all .15s" onclick="setTheme('light')">
+            <span style="font-size:1.1rem">☀️</span>
+            <div><div style="font-size:.82rem;font-weight:600">Claro</div><div style="font-size:.72rem;color:var(--muted)">Fondo blanco</div></div>
+          </label>
+          <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;padding:.6rem 1rem;border:2px solid ${DB.settings.theme==='dark'?'var(--accent)':'var(--border)'};border-radius:6px;flex:1;transition:all .15s" onclick="setTheme('dark')">
+            <span style="font-size:1.1rem">🌙</span>
+            <div><div style="font-size:.82rem;font-weight:600">Oscuro</div><div style="font-size:.72rem;color:var(--muted)">Fondo oscuro</div></div>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="settings-card">
       <div class="settings-card-title">Numeración de facturas</div>
       <div class="form-group" style="margin-bottom:.875rem">
         <label class="form-label">Prefijo (serie)</label>
@@ -1068,6 +1107,12 @@ function removeLogo() {
   render();
 }
 
+function setTheme(theme) {
+  DB.settings.theme = theme;
+  applyTheme(theme);
+  render();
+}
+
 async function saveSettings(){
   DB.settings.companyName=document.getElementById('s-name')?.value.trim()||DB.settings.companyName;
   DB.settings.cif=document.getElementById('s-cif')?.value.trim()||'';
@@ -1080,6 +1125,7 @@ async function saveSettings(){
   DB.settings.invoicePrefix=document.getElementById('s-prefix')?.value.trim()||'FAC';
   DB.settings.nextNumber=parseInt(document.getElementById('s-next')?.value)||DB.settings.nextNumber;
   DB.settings.year=parseInt(document.getElementById('s-year')?.value)||DB.settings.year;
+  if(DB.settings.theme)applyTheme(DB.settings.theme);
   await persistSettings(DB.settings);
   toast('Configuración guardada.','success');
   render();
@@ -1182,6 +1228,147 @@ function generateInvoicePDF(invId) {
   doc.text(inv.number,W-mr,H-7,{align:'right'});
   doc.setFontSize(6.5);doc.text('Factura conforme al art. 6 del RD 1619/2012 de facturación',W/2,H-4,{align:'center'});
   doc.save(`${inv.number}.pdf`);
+}
+
+// ════════════════════════════════════════════════════════════
+// REPORTS — Informes y análisis
+// ════════════════════════════════════════════════════════════
+function viewReports() {
+  const year = DB.settings.year || new Date().getFullYear();
+  // Quarterly IVA
+  const quarters = [
+    {label:'1T (Ene-Mar)', months:['01','02','03']},
+    {label:'2T (Abr-Jun)', months:['04','05','06']},
+    {label:'3T (Jul-Sep)', months:['07','08','09']},
+    {label:'4T (Oct-Dic)', months:['10','11','12']},
+  ];
+  const ivaRows = quarters.map(q => {
+    const invs = DB.invoices.filter(i=>i.date&&i.status!=='draft'&&q.months.some(m=>i.date.startsWith(`${year}-${m}`)));
+    const exps = DB.expenses.filter(e=>e.date&&q.months.some(m=>e.date.startsWith(`${year}-${m}`)));
+    const baseFacturado = invs.reduce((s,i)=>s+calcTotals(i.items,i.taxRate,i.irpfRate).base,0);
+    const ivaRepercutido = invs.reduce((s,i)=>s+calcTotals(i.items,i.taxRate,i.irpfRate).tax,0);
+    const ivaDeducible = exps.reduce((s,e)=>s+e.amount*0.21,0); // estimado 21%
+    const resultado = ivaRepercutido - ivaDeducible;
+    return {label:q.label, baseFacturado, ivaRepercutido, ivaDeducible, resultado};
+  });
+
+  // Monthly P&L
+  const months = [];
+  for(let m=1;m<=12;m++){
+    const mStr = String(m).padStart(2,'0');
+    const mLabel = new Date(`${year}-${mStr}-01`).toLocaleString('es-ES',{month:'long'});
+    const invs = DB.invoices.filter(i=>i.status==='paid'&&i.date&&i.date.startsWith(`${year}-${mStr}`));
+    const exps = DB.expenses.filter(e=>e.date&&e.date.startsWith(`${year}-${mStr}`));
+    const ingresos = invs.reduce((s,i)=>s+calcTotals(i.items,i.taxRate,i.irpfRate).total,0);
+    const gastos = exps.reduce((s,e)=>s+e.amount,0);
+    months.push({label:mLabel, ingresos, gastos, resultado:ingresos-gastos});
+  }
+
+  // Client ranking
+  const clientTotals = {};
+  DB.invoices.filter(i=>i.status!=='draft').forEach(inv=>{
+    const cl = getClient(inv.clientId);
+    const key = cl?cl.name:'Sin cliente';
+    const t = calcTotals(inv.items,inv.taxRate,inv.irpfRate);
+    clientTotals[key]=(clientTotals[key]||0)+t.total;
+  });
+  const topClients = Object.entries(clientTotals).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  return`
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem">
+
+    <!-- IVA Trimestral -->
+    <div class="table-card" style="grid-column:1/-1">
+      <div class="table-header">
+        <span class="table-title">📊 Resumen IVA trimestral ${year}</span>
+        <button class="btn btn-ghost btn-sm" onclick="exportResumenPDF()">↓ Exportar PDF</button>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Trimestre</th>
+          <th style="text-align:right">Base facturada</th>
+          <th style="text-align:right">IVA repercutido</th>
+          <th style="text-align:right">IVA deducible (est.)</th>
+          <th style="text-align:right">A ingresar (est.)</th>
+        </tr></thead>
+        <tbody>
+        ${ivaRows.map((r,i)=>`<tr>
+          <td style="font-weight:600">${r.label}</td>
+          <td class="td-amount text-muted">${fmtMoney(r.baseFacturado)}</td>
+          <td class="td-amount" style="color:var(--green)">${fmtMoney(r.ivaRepercutido)}</td>
+          <td class="td-amount" style="color:var(--orange)">${fmtMoney(r.ivaDeducible)}</td>
+          <td class="td-amount" style="font-weight:700;color:${r.resultado>=0?'var(--red)':'var(--green)'}">${fmtMoney(r.resultado)}</td>
+        </tr>`).join('')}
+        <tr style="background:var(--accent-bg);font-weight:700">
+          <td>TOTAL AÑO</td>
+          <td class="td-amount">${fmtMoney(ivaRows.reduce((s,r)=>s+r.baseFacturado,0))}</td>
+          <td class="td-amount" style="color:var(--green)">${fmtMoney(ivaRows.reduce((s,r)=>s+r.ivaRepercutido,0))}</td>
+          <td class="td-amount" style="color:var(--orange)">${fmtMoney(ivaRows.reduce((s,r)=>s+r.ivaDeducible,0))}</td>
+          <td class="td-amount" style="color:var(--red)">${fmtMoney(ivaRows.reduce((s,r)=>s+r.resultado,0))}</td>
+        </tr>
+        </tbody>
+      </table>
+      <div style="padding:.75rem 1.25rem;font-size:.75rem;color:var(--muted);border-top:1px solid var(--border)">
+        ⚠ El IVA deducible es una estimación al 21% sobre gastos. Consulta con tu gestor para el cálculo exacto.
+      </div>
+    </div>
+
+    <!-- Rentabilidad mensual -->
+    <div class="table-card">
+      <div class="table-header"><span class="table-title">📈 Rentabilidad mensual ${year}</span></div>
+      <div style="padding:1rem 1.25rem">
+        <canvas id="pnl-chart" height="180"></canvas>
+      </div>
+      <table>
+        <thead><tr><th>Mes</th><th style="text-align:right">Ingresos</th><th style="text-align:right">Gastos</th><th style="text-align:right">Resultado</th></tr></thead>
+        <tbody>
+        ${months.filter(m=>m.ingresos>0||m.gastos>0).map(m=>`<tr>
+          <td style="text-transform:capitalize;font-weight:500">${m.label}</td>
+          <td class="td-amount" style="color:var(--green)">${fmtMoney(m.ingresos)}</td>
+          <td class="td-amount" style="color:var(--red)">${fmtMoney(m.gastos)}</td>
+          <td class="td-amount" style="font-weight:700;color:${m.resultado>=0?'var(--green)':'var(--red)'}">${fmtMoney(m.resultado)}</td>
+        </tr>`).join('')||'<tr><td colspan="4" class="text-muted text-sm" style="padding:1rem;text-align:center">Sin datos este año</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Top clientes -->
+    <div class="table-card">
+      <div class="table-header"><span class="table-title">🏆 Clientes por facturación</span></div>
+      ${topClients.length?`
+      <div style="padding:1rem 1.25rem"><canvas id="clients-chart" height="180"></canvas></div>
+      <table><thead><tr><th>Cliente</th><th style="text-align:right">Total facturado</th></tr></thead><tbody>
+      ${topClients.map(([name,total],i)=>`<tr>
+        <td><span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:var(--accent);color:#fff;font-size:.65rem;font-weight:700;text-align:center;line-height:18px;margin-right:.5rem">${i+1}</span>${name}</td>
+        <td class="td-amount" style="font-weight:700">${fmtMoney(total)}</td>
+      </tr>`).join('')}
+      </tbody></table>`
+      :'<div class="empty"><div class="empty-title">Sin datos</div><div class="empty-sub">Crea facturas para ver el ranking.</div></div>'}
+    </div>
+  </div>`;
+}
+
+function actReports(){
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="exportResumenPDF()">↓ Exportar PDF completo</button>`;
+  setTimeout(()=>{
+    const year = DB.settings.year || new Date().getFullYear();
+    const mLabels=[];const ingresos=[];const gastos=[];
+    for(let m=1;m<=12;m++){
+      const mStr=String(m).padStart(2,'0');
+      mLabels.push(new Date(`${year}-${mStr}-01`).toLocaleString('es-ES',{month:'short'}));
+      ingresos.push(DB.invoices.filter(i=>i.status==='paid'&&i.date&&i.date.startsWith(`${year}-${mStr}`)).reduce((s,i)=>s+calcTotals(i.items,i.taxRate,i.irpfRate).total,0));
+      gastos.push(DB.expenses.filter(e=>e.date&&e.date.startsWith(`${year}-${mStr}`)).reduce((s,e)=>s+e.amount,0));
+    }
+    const c1=document.getElementById('pnl-chart');
+    if(c1&&typeof Chart!=='undefined'){new Chart(c1,{type:'bar',data:{labels:mLabels,datasets:[{label:'Ingresos',data:ingresos,backgroundColor:'rgba(22,163,74,.7)',borderRadius:4},{label:'Gastos',data:gastos,backgroundColor:'rgba(220,38,38,.5)',borderRadius:4}]},options:{responsive:true,plugins:{legend:{labels:{font:{size:10},boxWidth:10}}},scales:{y:{ticks:{callback:v=>v+'€',font:{size:9}},grid:{color:'rgba(0,0,0,.05)'}},x:{ticks:{font:{size:9}},grid:{display:false}}}}});}
+
+    // Client pie chart
+    const clientTotals={};
+    DB.invoices.filter(i=>i.status!=='draft').forEach(inv=>{const cl=getClient(inv.clientId);const key=cl?cl.name:'Sin cliente';clientTotals[key]=(clientTotals[key]||0)+calcTotals(inv.items,inv.taxRate,inv.irpfRate).total;});
+    const top=Object.entries(clientTotals).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const c2=document.getElementById('clients-chart');
+    if(c2&&typeof Chart!=='undefined'&&top.length){new Chart(c2,{type:'doughnut',data:{labels:top.map(e=>e[0]),datasets:[{data:top.map(e=>e[1]),backgroundColor:['#4f46e5','#7c3aed','#db2777','#ea580c','#16a34a'],borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10}}}}});}
+  },80);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1733,7 +1920,13 @@ function updateSidebarOrg() {
 // ════════════════════════════════════════════════════════════
 // APP INIT
 // ════════════════════════════════════════════════════════════
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme || 'light');
+  localStorage.setItem('invoix_theme', theme || 'light');
+}
 function showApp() {
+  const savedTheme = DB.settings.theme || localStorage.getItem('invoix_theme') || 'light';
+  applyTheme(savedTheme);
   document.getElementById('loading-overlay').classList.add('hidden');
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app-shell').classList.remove('hidden');
