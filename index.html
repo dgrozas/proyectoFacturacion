@@ -1249,14 +1249,9 @@ async function checkUserSetup() {
   const done = () => clearTimeout(timeout);
 
   try {
-    console.log('1. Comprobando admin global (via RPC)...');
-    const {data: adminData, error: adminErr} = await sb.rpc('is_global_admin');
-
-    if (adminErr) {
-      console.error('Error is_global_admin RPC:', adminErr.message);
-    }
-
-    isGlobalAdmin = !!adminData;
+    console.log('1. Comprobando admin global (local check)...');
+    const ADMIN_IDS = ['1df8c0ab-dae1-4b89-b0d4-08859fe7fb6c'];
+    isGlobalAdmin = ADMIN_IDS.includes(currentUser.id);
     console.log('2. isGlobalAdmin:', isGlobalAdmin);
 
     if (isGlobalAdmin) {
