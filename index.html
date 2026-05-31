@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -106,6 +107,7 @@ input,select,textarea{font-family:var(--font)}
 
 /* ── Stats ────────────────────────────────── */
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.75rem}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.25rem}
 .stat-label{font-size:.68rem;font-weight:600;color:var(--light);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.35rem}
 .stat-value{font-size:1.5rem;font-weight:700;color:var(--text);font-family:var(--mono);letter-spacing:-.02em}
@@ -241,6 +243,18 @@ tr:hover td{background:#fafaf9}
 .org-card-meta{font-size:.75rem;color:var(--muted)}
 .org-card-active{border-left:3px solid var(--sidebar-active)}
 .nav-sep{height:1px;background:#27272a;margin:.5rem 1.25rem}
+
+/* ── Gastos ───────────────────────────────── */
+.expense-cat{display:inline-block;padding:.15rem .5rem;border-radius:3px;font-size:.72rem;font-weight:600;background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-border)}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.5rem}
+.stat-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.35rem}
+.stat-value{font-size:1.6rem;font-weight:700;color:var(--text);line-height:1.1}
+.stat-sub{font-size:.75rem;color:var(--muted);margin-top:.3rem}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.5rem;margin-bottom:1.5rem}
+.chart-title{font-size:.82rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:1rem}
+.result-positive{color:var(--green);font-weight:700}
+.result-negative{color:var(--red);font-weight:700}
 </style>
 </head>
 <body>
@@ -296,6 +310,10 @@ tr:hover td{background:#fafaf9}
       <div class="nav-item" data-view="clients" onclick="navigate('clients')">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Clientes
+      </div>
+      <div class="nav-item" data-view="expenses" onclick="navigate('expenses')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Gastos
       </div>
       <div class="nav-item" data-view="settings" onclick="navigate('settings')">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -365,7 +383,9 @@ const DEFAULT_SETTINGS = {
 };
 
 // Local cache — always read from here, writes go to here + Supabase
-let DB = { clients: [], invoices: [], settings: { ...DEFAULT_SETTINGS } };
+let DB = { clients: [], invoices: [], expenses: [], settings: { ...DEFAULT_SETTINGS } };
+
+const EXPENSE_CATS = ['Suministros','Alquiler','Software','Marketing','Transporte','Gestoría','Material','Servicios','Otros'];
 
 // ════════════════════════════════════════════════════════════
 // TOAST
@@ -434,7 +454,7 @@ function logout() {
   currentOrgId = null;
   currentOrgName = '';
   allOrgs = [];
-  DB = { clients: [], invoices: [], settings: { ...DEFAULT_SETTINGS } };
+  DB = { clients: [], invoices: [], expenses: [], settings: { ...DEFAULT_SETTINGS } };
   document.getElementById('app-shell').classList.add('hidden');
   document.getElementById('login-screen').classList.remove('hidden');
   document.getElementById('auth-password').value = '';
@@ -469,9 +489,14 @@ async function loadData() {
       iq = iq.eq('user_id', currentUser.id);
       sq = sq.eq('user_id', currentUser.id);
     }
-    const [cr, ir, sr] = await Promise.all([cq, iq, sq.maybeSingle()]);
+    let eq = sb.from('expenses').select('*');
+    if (currentOrgId) eq = eq.eq('organization_id', currentOrgId);
+    else eq = eq.eq('user_id', currentUser.id);
+
+    const [cr, ir, sr, er] = await Promise.all([cq, iq, sq.maybeSingle(), eq]);
     DB.clients = (cr.data || []).map(c => ({ id: c.id, name: c.name, cif: c.cif||'', address: c.address||'', email: c.email||'', phone: c.phone||'' }));
     DB.invoices = (ir.data || []).map(i => ({ id: i.id, number: i.number, clientId: i.client_id, date: i.date, dueDate: i.due_date, taxRate: i.tax_rate, irpfRate: i.irpf_rate, notes: i.notes||'', status: i.status, items: i.items || [] }));
+    DB.expenses = (er.data || []).map(e => ({ id: e.id, date: e.date, category: e.category||'Otros', description: e.description||'', amount: parseFloat(e.amount)||0, notes: e.notes||'' }));
     if (sr.data) {
       DB.settings = { companyName: sr.data.company_name||'', cif: sr.data.cif||'', address: sr.data.address||'', city: sr.data.city||'', email: sr.data.email||'', phone: sr.data.phone||'', iban: sr.data.iban||'', web: sr.data.web||'', nextNumber: sr.data.next_number||1, year: sr.data.year||new Date().getFullYear() };
     }
@@ -507,6 +532,20 @@ async function persistInvoice(inv, isNew) {
 async function persistDeleteInvoice(id) {
   if (demoMode || IS_DEMO) { saveDemo(); return; }
   try { await sb.from('invoices').delete().eq('id', id); } catch(e) { toast('Error al eliminar.', 'error'); }
+}
+
+async function persistExpense(exp, isNew) {
+  if (demoMode || IS_DEMO) { saveDemo(); return; }
+  try {
+    const row = { id: exp.id, user_id: currentUser.id, organization_id: currentOrgId, date: exp.date, category: exp.category, description: exp.description, amount: exp.amount, notes: exp.notes };
+    if (isNew) await sb.from('expenses').insert(row);
+    else await sb.from('expenses').update(row).eq('id', exp.id);
+  } catch(e) { toast('Error al guardar gasto.', 'error'); }
+}
+
+async function persistDeleteExpense(id) {
+  if (demoMode || IS_DEMO) { saveDemo(); return; }
+  try { await sb.from('expenses').delete().eq('id', id); } catch(e) { toast('Error al eliminar gasto.', 'error'); }
 }
 
 async function persistSettings(s) {
@@ -558,7 +597,7 @@ function pendingTotal() {
 // ROUTER
 // ════════════════════════════════════════════════════════════
 let currentView='dashboard', currentParams={};
-const VIEW_TITLES={dashboard:'Dashboard',invoices:'Facturas','new-invoice':'Nueva factura','invoice-detail':'Detalle de factura',clients:'Clientes',settings:'Configuración',admin:'Panel Admin'};
+const VIEW_TITLES={dashboard:'Dashboard',invoices:'Facturas','new-invoice':'Nueva factura','invoice-detail':'Detalle de factura',clients:'Clientes',expenses:'Gastos',settings:'Configuración',admin:'Panel Admin'};
 
 function navigate(view,params={}) {
   currentView=view; currentParams=params;
@@ -567,10 +606,10 @@ function navigate(view,params={}) {
 }
 function render() {
   document.getElementById('topbar-title').textContent=VIEW_TITLES[currentView]||'';
-  const views={dashboard:viewDashboard,invoices:viewInvoices,'new-invoice':viewInvoiceForm,'invoice-detail':viewInvoiceDetail,clients:viewClients,settings:viewSettings,admin:viewAdmin};
+  const views={dashboard:viewDashboard,invoices:viewInvoices,'new-invoice':viewInvoiceForm,'invoice-detail':viewInvoiceDetail,clients:viewClients,expenses:viewExpenses,settings:viewSettings,admin:viewAdmin};
   const fn=views[currentView];
   document.getElementById('app-content').innerHTML=fn?fn(currentParams):'';
-  const acts={dashboard:actDashboard,invoices:actInvoices,'new-invoice':actNewInvoice,'invoice-detail':actInvoiceDetail,clients:actClients,settings:actSettings,admin:actAdmin};
+  const acts={dashboard:actDashboard,invoices:actInvoices,'new-invoice':actNewInvoice,'invoice-detail':actInvoiceDetail,clients:actClients,expenses:actExpenses,settings:actSettings,admin:actAdmin};
   const af=acts[currentView];
   if(af)af(currentParams); else document.getElementById('topbar-actions').innerHTML='';
 }
@@ -579,24 +618,51 @@ function render() {
 // DASHBOARD
 // ════════════════════════════════════════════════════════════
 function viewDashboard() {
-  const recent=[...DB.invoices].sort((a,b)=>b.date>a.date?1:-1).slice(0,8);
+  const recent=[...DB.invoices].sort((a,b)=>b.date>a.date?1:-1).slice(0,6);
   const overdue=DB.invoices.filter(i=>getStatus(i)==='overdue').length;
   const cobradas=DB.invoices.filter(i=>i.status==='paid').reduce((s,i)=>s+calcTotals(i.items,i.taxRate,i.irpfRate).total,0);
+  const totalGastos=DB.expenses.reduce((s,e)=>s+e.amount,0);
+  const resultado=cobradas-totalGastos;
   return`
-  <div class="stats-grid">
-    <div class="stat-card accent-card"><div class="stat-label">Facturado este mes</div><div class="stat-value">${fmtMoney(monthTotal())}</div><div class="stat-sub">${DB.invoices.filter(i=>i.date&&i.date.startsWith(new Date().toISOString().slice(0,7))).length} facturas</div></div>
-    <div class="stat-card"><div class="stat-label">Pendiente de cobro</div><div class="stat-value">${fmtMoney(pendingTotal())}</div><div class="stat-sub">${DB.invoices.filter(i=>['pending','overdue'].includes(getStatus(i))).length} facturas</div></div>
-    <div class="stat-card green-card"><div class="stat-label">Cobradas (total)</div><div class="stat-value">${fmtMoney(cobradas)}</div><div class="stat-sub">${DB.invoices.filter(i=>i.status==='paid').length} facturas</div></div>
-    <div class="stat-card ${overdue>0?'red-card':''}"><div class="stat-label">Vencidas sin cobrar</div><div class="stat-value" style="${overdue>0?'color:var(--red)':''}">${overdue}</div><div class="stat-sub">${overdue>0?'Requieren atención':'Sin retrasos'}</div></div>
+  <div class="stat-grid">
+    <div class="stat-card" style="border-left:3px solid var(--accent)">
+      <div class="stat-label">Facturado este mes</div>
+      <div class="stat-value">${fmtMoney(monthTotal())}</div>
+      <div class="stat-sub">${DB.invoices.filter(i=>i.date&&i.date.startsWith(new Date().toISOString().slice(0,7))).length} facturas emitidas</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Pendiente de cobro</div>
+      <div class="stat-value">${fmtMoney(pendingTotal())}</div>
+      <div class="stat-sub">${DB.invoices.filter(i=>['pending','overdue'].includes(getStatus(i))).length} facturas${overdue>0?` · <span style="color:var(--red)">${overdue} vencidas</span>`:''}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Gastos registrados</div>
+      <div class="stat-value" style="color:var(--red)">${fmtMoney(totalGastos)}</div>
+      <div class="stat-sub">${DB.expenses.length} gastos</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Resultado neto</div>
+      <div class="stat-value ${resultado>=0?'result-positive':'result-negative'}">${fmtMoney(resultado)}</div>
+      <div class="stat-sub">Cobrado − Gastos</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:2fr 1fr;gap:1.25rem;margin-bottom:1.5rem">
+    <div class="chart-card">
+      <div class="chart-title">Ingresos vs Gastos (últimos 6 meses)</div>
+      <canvas id="dash-chart" height="110"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Gastos por categoría</div>
+      <canvas id="cat-chart" height="110"></canvas>
+    </div>
   </div>
   <div class="table-card">
     <div class="table-header"><span class="table-title">Facturas recientes</span><button class="btn btn-primary btn-sm" onclick="navigate('new-invoice')">+ Nueva factura</button></div>
-    ${recent.length?`<table><thead><tr><th>Nº</th><th>Cliente</th><th>Fecha</th><th>Vencimiento</th><th>Estado</th><th style="text-align:right">Total</th><th></th></tr></thead><tbody>
+    ${recent.length?`<table><thead><tr><th>Nº</th><th>Cliente</th><th>Fecha</th><th>Estado</th><th style="text-align:right">Total</th><th></th></tr></thead><tbody>
     ${recent.map(inv=>{const cl=getClient(inv.clientId);const t=calcTotals(inv.items,inv.taxRate,inv.irpfRate);return`<tr>
       <td class="td-mono">${inv.number}</td>
       <td style="font-weight:500">${cl?cl.name:'<span class="text-muted">—</span>'}</td>
       <td class="text-muted text-sm">${fmtDate(inv.date)}</td>
-      <td class="text-muted text-sm">${fmtDate(inv.dueDate)}</td>
       <td>${statusBadge(inv)}</td>
       <td class="td-amount">${fmtMoney(t.total)}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="navigate('invoice-detail',{id:'${inv.id}'})">Ver →</button></td>
@@ -604,7 +670,20 @@ function viewDashboard() {
     :`<div class="empty"><div class="empty-title">Sin facturas todavía</div><div class="empty-sub">Crea tu primera factura para empezar.</div></div>`}
   </div>`;
 }
-function actDashboard(){document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-primary btn-sm" onclick="navigate('new-invoice')">+ Nueva factura</button>`;}
+function actDashboard(){
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-primary btn-sm" onclick="navigate('new-invoice')">+ Nueva factura</button>`;
+  setTimeout(()=>{
+    const months=[];const mLabels=[];
+    for(let i=5;i>=0;i--){const d=new Date();d.setMonth(d.getMonth()-i);months.push(d.toISOString().slice(0,7));mLabels.push(d.toLocaleString('es-ES',{month:'short',year:'2-digit'}));}
+    const ingresos=months.map(m=>DB.invoices.filter(i=>i.status==='paid'&&i.date&&i.date.startsWith(m)).reduce((s,i)=>s+calcTotals(i.items,i.taxRate,i.irpfRate).total,0));
+    const gastos=months.map(m=>DB.expenses.filter(e=>e.date&&e.date.startsWith(m)).reduce((s,e)=>s+e.amount,0));
+    const c1=document.getElementById('dash-chart');
+    if(c1&&typeof Chart!=='undefined'){new Chart(c1,{type:'bar',data:{labels:mLabels,datasets:[{label:'Ingresos',data:ingresos,backgroundColor:'rgba(180,83,9,.75)',borderRadius:3},{label:'Gastos',data:gastos,backgroundColor:'rgba(185,28,28,.5)',borderRadius:3}]},options:{responsive:true,plugins:{legend:{labels:{font:{size:11},boxWidth:10}}},scales:{y:{ticks:{callback:v=>v+'€',font:{size:10}},grid:{color:'#f0f0ef'}},x:{ticks:{font:{size:10}},grid:{display:false}}}}});}
+    const cats={};DB.expenses.forEach(e=>{cats[e.category]=(cats[e.category]||0)+e.amount;});
+    const c2=document.getElementById('cat-chart');
+    if(c2&&typeof Chart!=='undefined'&&Object.keys(cats).length){const colors=['#b45309','#d97706','#f59e0b','#92400e','#15803d','#1d4ed8','#7c3aed','#be185d','#0e7490'];new Chart(c2,{type:'doughnut',data:{labels:Object.keys(cats),datasets:[{data:Object.values(cats),backgroundColor:colors,borderWidth:1}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10}}}}});}
+  },50);
+}
 
 // ════════════════════════════════════════════════════════════
 // INVOICES
@@ -1039,6 +1118,93 @@ function generateInvoicePDF(invId) {
 }
 
 // ════════════════════════════════════════════════════════════
+// EXPENSES
+// ════════════════════════════════════════════════════════════
+function viewExpenses() {
+  const exps=[...DB.expenses].sort((a,b)=>b.date>a.date?1:-1);
+  const total=exps.reduce((s,e)=>s+e.amount,0);
+  return`
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">Gastos (${exps.length}) · Total: ${fmtMoney(total)}</span>
+      <button class="btn btn-primary btn-sm" onclick="openExpenseModal()">+ Nuevo gasto</button>
+    </div>
+    ${exps.length?`<table><thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th style="text-align:right">Importe</th><th></th></tr></thead><tbody>
+    ${exps.map(e=>`<tr>
+      <td class="text-muted text-sm">${fmtDate(e.date)}</td>
+      <td><span class="expense-cat">${e.category}</span></td>
+      <td style="font-weight:500">${e.description||'—'}</td>
+      <td class="td-amount" style="color:var(--red)">${fmtMoney(e.amount)}</td>
+      <td><div class="td-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openExpenseModal('${e.id}')">Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteExpense('${e.id}')">×</button>
+      </div></td>
+    </tr>`).join('')}</tbody></table>`
+    :`<div class="empty"><div class="empty-title">Sin gastos registrados</div><div class="empty-sub">Registra tus gastos para ver el resultado neto en el dashboard.</div></div>`}
+  </div>`;
+}
+function actExpenses(){
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-primary btn-sm" onclick="openExpenseModal()">+ Nuevo gasto</button>`;
+}
+
+function openExpenseModal(id) {
+  const exp = id ? DB.expenses.find(e=>e.id===id) : null;
+  const cats = EXPENSE_CATS.map(c=>`<option value="${c}" ${exp&&exp.category===c?'selected':''}>${c}</option>`).join('');
+  document.getElementById('modal-container').innerHTML=`
+  <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">${exp?'Editar gasto':'Nuevo gasto'}</span>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group"><label class="form-label">Fecha *</label>
+          <input class="form-input" id="exp-date" type="date" value="${exp?exp.date:today()}"/></div>
+        <div class="form-group"><label class="form-label">Categoría *</label>
+          <select class="form-input form-select" id="exp-cat">${cats}</select></div>
+        <div class="form-group"><label class="form-label">Descripción *</label>
+          <input class="form-input" id="exp-desc" placeholder="Ej: Cuota mensual Dropbox" value="${exp?exp.description:''}"/></div>
+        <div class="form-group"><label class="form-label">Importe (€) *</label>
+          <input class="form-input" id="exp-amount" type="number" step="0.01" min="0" placeholder="0.00" value="${exp?exp.amount:''}"/></div>
+        <div class="form-group"><label class="form-label">Notas</label>
+          <input class="form-input" id="exp-notes" placeholder="Opcional" value="${exp?exp.notes:''}"/></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveExpense('${id||''}')">Guardar gasto</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function saveExpense(id) {
+  const date=document.getElementById('exp-date').value;
+  const category=document.getElementById('exp-cat').value;
+  const description=document.getElementById('exp-desc').value.trim();
+  const amount=parseFloat(document.getElementById('exp-amount').value)||0;
+  const notes=document.getElementById('exp-notes').value.trim();
+  if(!date||!description||!amount){toast('Rellena fecha, descripción e importe.','error');return;}
+  const isNew=!id;
+  const exp={id:id||genId(),date,category,description,amount,notes};
+  if(isNew)DB.expenses.unshift(exp);
+  else{const i=DB.expenses.findIndex(e=>e.id===id);if(i>=0)DB.expenses[i]=exp;}
+  await persistExpense(exp,isNew);
+  closeModal();
+  render();
+  toast(isNew?'Gasto añadido.':'Gasto actualizado.','success');
+}
+
+async function deleteExpense(id) {
+  if(!confirm('¿Eliminar este gasto?'))return;
+  DB.expenses=DB.expenses.filter(e=>e.id!==id);
+  await persistDeleteExpense(id);
+  render();
+  toast('Gasto eliminado.','success');
+}
+
+function closeModal(){document.getElementById('modal-container').innerHTML='';}
+
+// ════════════════════════════════════════════════════════════
 // ADMIN PANEL
 // ════════════════════════════════════════════════════════════
 let adminOrgsLoaded = false;
@@ -1420,14 +1586,11 @@ async function init() {
       }
     });
 
-    const { data: { session }, error } = await sb.auth.getSession();
-    if (error) throw error;
-    if (!session) {
-      clearFailsafe();
-      document.getElementById('loading-overlay').classList.add('hidden');
-      document.getElementById('login-screen').classList.remove('hidden');
-    }
-    // If session exists, onAuthStateChange handles it
+    // Forzar login siempre al cargar la página
+    await sb.auth.signOut();
+    clearFailsafe();
+    document.getElementById('loading-overlay').classList.add('hidden');
+    document.getElementById('login-screen').classList.remove('hidden');
 
   } catch(e) {
     console.error('Init error:', e);
