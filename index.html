@@ -513,37 +513,25 @@ function saveDemo() {
 
 async function loadData() {
   if (demoMode || IS_DEMO) return;
+  if (!currentOrgId) return;
   try {
-    // Build queries scoped to the current org
-    let cq = sb.from('clients').select('*');
-    let iq = sb.from('invoices').select('*');
-    let sq = sb.from('settings').select('*');
-    if (currentOrgId) {
-      cq = cq.eq('organization_id', currentOrgId);
-      iq = iq.eq('organization_id', currentOrgId);
-      sq = sq.eq('organization_id', currentOrgId);
-    } else {
-      // Fallback: scope by user_id (backwards compat for orgs not yet migrated)
-      cq = cq.eq('user_id', currentUser.id);
-      iq = iq.eq('user_id', currentUser.id);
-      sq = sq.eq('user_id', currentUser.id);
-    }
-    let eq = sb.from('expenses').select('*');
-    if (currentOrgId) eq = eq.eq('organization_id', currentOrgId);
-    else eq = eq.eq('user_id', currentUser.id);
-
-    const [cr, ir, sr, er] = await Promise.all([cq, iq, sq.maybeSingle(), eq]);
-    DB.clients = (cr.data || []).map(c => ({ id: c.id, name: c.name, cif: c.cif||'', address: c.address||'', email: c.email||'', phone: c.phone||'' }));
-    DB.invoices = (ir.data || []).map(i => ({ id: i.id, number: i.number, clientId: i.client_id, date: i.date, dueDate: i.due_date, taxRate: i.tax_rate, irpfRate: i.irpf_rate, notes: i.notes||'', status: i.status, items: i.items || [] }));
-    DB.expenses = (er.data || []).map(e => ({ id: e.id, date: e.date, category: e.category||'Otros', description: e.description||'', amount: parseFloat(e.amount)||0, notes: e.notes||'' }));
-    if (sr.data) {
-      DB.settings = { companyName: sr.data.company_name||'', cif: sr.data.cif||'', address: sr.data.address||'', city: sr.data.city||'', email: sr.data.email||'', phone: sr.data.phone||'', iban: sr.data.iban||'', web: sr.data.web||'', logo: sr.data.logo||'', invoicePrefix: sr.data.invoice_prefix||'FAC', nextNumber: sr.data.next_number||1, year: sr.data.year||new Date().getFullYear() };
+    const {data, error} = await sb.rpc('get_org_data', {org_id: currentOrgId, uid: currentUser.id});
+    if (error) throw error;
+    if (!data) { console.warn('get_org_data: sin acceso'); return; }
+    DB.clients = (data.clients || []).map(c => ({ id: c.id, name: c.name, cif: c.cif||'', address: c.address||'', email: c.email||'', phone: c.phone||'' }));
+    DB.invoices = (data.invoices || []).map(i => ({ id: i.id, number: i.number, clientId: i.client_id, date: i.date, dueDate: i.due_date, taxRate: i.tax_rate, irpfRate: i.irpf_rate, notes: i.notes||'', status: i.status, items: i.items || [] }));
+    DB.expenses = (data.expenses || []).map(e => ({ id: e.id, date: e.date, category: e.category||'Otros', description: e.description||'', amount: parseFloat(e.amount)||0, notes: e.notes||'' }));
+    const s = data.settings;
+    if (s) {
+      DB.settings = { companyName: s.company_name||'', cif: s.cif||'', address: s.address||'', city: s.city||'', email: s.email||'', phone: s.phone||'', iban: s.iban||'', web: s.web||'', logo: s.logo||'', invoicePrefix: s.invoice_prefix||'FAC', theme: s.theme||'light', nextNumber: s.next_number||1, year: s.year||new Date().getFullYear() };
+      applyTheme(DB.settings.theme);
     }
   } catch(e) {
     console.error('Error cargando datos:', e);
-    toast('Error al cargar datos. Comprueba tu conexión.', 'error');
+    toast('Error al cargar datos.', 'error');
   }
 }
+
 
 async function persistClient(client, isNew) {
   if (demoMode || IS_DEMO) { saveDemo(); return; }
