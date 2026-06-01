@@ -1602,130 +1602,110 @@ function closeModal(){document.getElementById('modal-container').innerHTML='';}
 // ADMIN PANEL
 // ════════════════════════════════════════════════════════════
 let adminOrgsLoaded = false;
+const ADMIN_PIN = '1234'; // Cambia este PIN por el tuyo
 
 async function loadAdminOrgs() {
   try {
     const {data, error} = await sb.rpc('get_all_orgs_for_admin');
     if (error) throw error;
     allOrgs = data || [];
-    // Actualizar solo la lista, sin re-renderizar el formulario
-    const listEl = document.getElementById('admin-orgs-list');
-    if (listEl) {
-      if (allOrgs.length === 0) {
-        listEl.innerHTML = `<div class="empty"><div class="empty-title">Sin empresas todavía</div><div class="empty-sub">Crea la primera empresa con el formulario →</div></div>`;
-      } else {
-        const rows = allOrgs.map(org => `
-          <div class="org-card ${org.id===currentOrgId?'org-card-active':''}">
-            <div>
-              <div class="org-card-name">${org.name}</div>
-              <div class="org-card-meta">Plan: <strong>${org.plan||'free'}</strong> · Alta: ${org.created_at?new Date(org.created_at).toLocaleDateString('es-ES'):'—'}</div>
-            </div>
-            <div style="display:flex;gap:.5rem;align-items:center">
-              ${org.id!==currentOrgId
-                ?`<button class="btn btn-ghost btn-sm" onclick="switchAdminToOrg('${org.id}','${org.name.replace(/'/g,"\\'").replace(/"/g,'\\"')}')">👁 Ver como</button>`
-                :`<span class="badge badge-paid">Viendo ahora</span> <button class="btn btn-primary btn-sm" onclick="navigate('dashboard')">Ir al dashboard →</button>`
-              }
-              <button class="btn btn-danger btn-sm" onclick="deleteOrg('${org.id}','${org.name.replace(/'/g,"\\'")}')">×</button>
-            </div>
-          </div>`).join('');
-        listEl.innerHTML = `<div style="padding:.75rem">${rows}</div>`;
-      }
-      const titleEl = document.getElementById('admin-orgs-count');
-      if (titleEl) titleEl.textContent = `Empresas activas (${allOrgs.length})`;
-    }
+    renderAdminOrgsList();
   } catch(e) { toast('Error al cargar empresas: ' + e.message, 'error'); }
+}
+
+function renderAdminOrgsList() {
+  const listEl = document.getElementById('admin-orgs-list');
+  const titleEl = document.getElementById('admin-orgs-count');
+  if (!listEl) return;
+  if (titleEl) titleEl.textContent = `Empresas activas (${allOrgs.length})`;
+  if (allOrgs.length === 0) {
+    listEl.innerHTML = `<div class="empty"><div class="empty-title">Sin empresas todavía</div><div class="empty-sub">Usa el botón "+ Nueva empresa" para añadir tu primer cliente.</div></div>`;
+    return;
+  }
+  const rows = allOrgs.map(org => `
+    <div class="org-card ${org.id===currentOrgId?'org-card-active':''}" style="transition:all .2s">
+      <div style="flex:1;min-width:0">
+        <div class="org-card-name">${org.name}</div>
+        <div class="org-card-meta">
+          <span style="background:${org.plan==='pro'?'var(--accent-bg)':'var(--border)'};color:${org.plan==='pro'?'var(--accent)':'var(--muted)'};padding:.1rem .4rem;border-radius:3px;font-size:.65rem;font-weight:700;text-transform:uppercase">${org.plan||'free'}</span>
+          · Alta: ${org.created_at?new Date(org.created_at).toLocaleDateString('es-ES'):'—'}
+        </div>
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center;flex-shrink:0">
+        ${org.id!==currentOrgId
+          ?`<button class="btn btn-ghost btn-sm" onclick="switchAdminToOrg('${org.id}','${org.name.replace(/'/g,"\\'").replace(/"/g,'\\"')}')">👁 Ver</button>`
+          :`<span class="badge badge-paid">Viendo</span>`
+        }
+        <button style="background:var(--red-bg);border:1px solid var(--red-border);color:var(--red);border-radius:6px;padding:.35rem .7rem;font-size:.75rem;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--red)';this.style.color='#fff'" onmouseout="this.style.background='var(--red-bg)';this.style.color='var(--red)'" onclick="confirmDeleteOrg('${org.id}','${org.name.replace(/'/g,"\\'")}')">
+          🗑 Eliminar
+        </button>
+      </div>
+    </div>`).join('');
+  listEl.innerHTML = `<div style="padding:.75rem;display:flex;flex-direction:column;gap:.5rem">${rows}</div>`;
 }
 
 function viewAdmin() {
   if (!adminOrgsLoaded && isGlobalAdmin) { adminOrgsLoaded = true; loadAdminOrgs(); }
   const viewing = currentOrgId ? allOrgs.find(o=>o.id===currentOrgId) : null;
-  const orgRows = allOrgs.map(org => `
-    <div class="org-card ${org.id===currentOrgId?'org-card-active':''}">
-      <div>
-        <div class="org-card-name">${org.name}</div>
-        <div class="org-card-meta">Plan: <strong>${org.plan||'free'}</strong> · Alta: ${org.created_at?new Date(org.created_at).toLocaleDateString('es-ES'):'—'}</div>
-      </div>
-      <div style="display:flex;gap:.5rem;align-items:center">
-        ${org.id!==currentOrgId
-          ?`<button class="btn btn-ghost btn-sm" onclick="switchAdminToOrg('${org.id}','${org.name.replace(/'/g,"\\'").replace(/"/g,'\\"')}')">👁 Ver como</button>`
-          :`<span class="badge badge-paid">Viendo ahora</span> <button class="btn btn-primary btn-sm" onclick="navigate('dashboard')">Ir al dashboard →</button>`
-        }
-        <button class="btn btn-danger btn-sm" onclick="deleteOrg('${org.id}','${org.name.replace(/'/g,"\\'")}')">×</button>
-      </div>
-    </div>`).join('');
-
   return `
-  ${viewing ? `<div class="alert alert-warn" style="margin-bottom:1rem">
-    <strong>👁 Modo vista:</strong> estás viendo los datos de <strong>${viewing.name}</strong> &nbsp;—&nbsp;
-    <a onclick="switchAdminToOrg(null)" style="font-weight:700;cursor:pointer">Salir y volver al panel →</a>
+  ${viewing ? `<div class="alert alert-warn" style="margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between">
+    <span>👁 <strong>Modo vista:</strong> estás viendo los datos de <strong>${viewing.name}</strong></span>
+    <button class="btn btn-ghost btn-sm" onclick="switchAdminToOrg(null)">← Salir</button>
   </div>` : ''}
-
-  <div style="display:grid;grid-template-columns:1fr 380px;gap:1.5rem;align-items:start;max-width:1100px">
-
-    <!-- Lista de empresas -->
-    <div class="table-card">
-      <div class="table-header">
+  <div class="table-card">
+    <div class="table-header">
+      <div>
         <span class="table-title" id="admin-orgs-count">Empresas activas (${allOrgs.length})</span>
-        <button class="btn btn-ghost btn-sm" onclick="refreshAdminOrgs()">↻ Actualizar</button>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:.1rem">Clientes con acceso a INVOIX</div>
       </div>
-      <div id="admin-orgs-list">
-      ${allOrgs.length === 0
-        ? `<div class="empty"><div class="empty-title">Cargando...</div><div class="empty-sub"></div></div>`
-        : `<div style="padding:.75rem">${orgRows}</div>`
-      }
+      <div style="display:flex;gap:.5rem">
+        <button class="btn btn-ghost btn-sm" onclick="refreshAdminOrgs()">↻</button>
+        <button class="btn btn-primary btn-sm" onclick="openNewOrgModal()">+ Nueva empresa</button>
       </div>
     </div>
-
-    <!-- Formulario nueva empresa -->
-    <div>
-      <div class="panel">
-        <div class="panel-body">
-          <div class="form-section-title">Nueva empresa cliente</div>
-          <div class="form-group" style="margin-bottom:.875rem">
-            <label class="form-label">Nombre de la empresa *</label>
-            <input class="form-input" id="new-org-name" placeholder="Clínica FisioPlus S.L."/>
-          </div>
-          <div class="form-group" style="margin-bottom:.875rem">
-            <label class="form-label">Email del propietario *</label>
-            <input class="form-input" id="new-org-email" type="email" placeholder="propietario@empresa.com"/>
-            <div style="font-size:.7rem;color:var(--muted);margin-top:.3rem">Este email recibirá acceso a la cuenta.</div>
-          </div>
-          <div class="form-group" style="margin-bottom:1rem">
-            <label class="form-label">Plan</label>
-            <select class="form-input form-select" id="new-org-plan">
-              <option value="free">Free (gratis)</option>
-              <option value="pro">Pro (9,99 €/mes)</option>
-            </select>
-          </div>
-          <button class="btn btn-primary" style="width:100%" onclick="createNewClientOrg()">
-            Crear empresa y preparar acceso →
-          </button>
-          <div class="login-error" id="admin-org-error" style="margin-top:.75rem"></div>
-        </div>
-      </div>
-
-      <!-- Panel de instrucciones (oculto hasta crear) -->
-      <div id="admin-instructions" class="panel" style="display:none;margin-top:1rem;border-left:3px solid var(--green)">
-        <div class="panel-body">
-          <div style="font-size:.8rem;font-weight:700;color:var(--green);margin-bottom:.75rem">✓ Empresa creada — Siguiente paso</div>
-          <div style="font-size:.82rem;color:var(--text);line-height:1.7">
-            Ve a <strong>Supabase → Authentication → Users → Add user</strong><br>
-            Email: <strong id="instr-email" style="font-family:var(--mono);background:#f5f5f4;padding:.1rem .3rem;border-radius:2px"></strong>
-            <button onclick="copyInstrEmail()" style="background:none;border:1px solid var(--border);border-radius:3px;padding:.15rem .4rem;font-size:.7rem;cursor:pointer;margin-left:.4rem">Copiar</button><br>
-            Pon la contraseña que quieras y mándasela por WhatsApp/email.
-          </div>
-          <div style="margin-top:.875rem;font-size:.78rem;color:var(--muted)">
-            Cuando el cliente entre por primera vez con esas credenciales, la app le asignará automáticamente su empresa.
-          </div>
-        </div>
-      </div>
+    <div id="admin-orgs-list">
+      <div class="empty"><div class="empty-title">Cargando...</div></div>
     </div>
-
   </div>`;
 }
 
 function actAdmin() {
-  document.getElementById('topbar-actions').innerHTML = '';
+  document.getElementById('topbar-actions').innerHTML = `<button class="btn btn-primary btn-sm" onclick="openNewOrgModal()">+ Nueva empresa</button>`;
+}
+
+function openNewOrgModal() {
+  document.getElementById('modal-container').innerHTML = `
+  <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Nueva empresa cliente</span>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Nombre de la empresa *</label>
+          <input class="form-input" id="new-org-name" placeholder="Clínica FisioPlus S.L." autofocus/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email del propietario *</label>
+          <input class="form-input" id="new-org-email" type="email" placeholder="propietario@empresa.com"/>
+          <div style="font-size:.72rem;color:var(--muted);margin-top:.3rem">Este email recibirá acceso a la cuenta de INVOIX.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Plan</label>
+          <select class="form-input form-select" id="new-org-plan">
+            <option value="free">Free (gratis)</option>
+            <option value="pro" selected>Pro (19,99 €/mes)</option>
+          </select>
+        </div>
+        <div class="login-error" id="admin-org-error" style="margin-top:.5rem"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" id="create-org-btn" onclick="createNewClientOrg()">Crear empresa →</button>
+      </div>
+    </div>
+  </div>`;
 }
 
 function copyInstrEmail() {
@@ -1736,60 +1716,62 @@ function copyInstrEmail() {
 async function createNewClientOrg() {
   const name  = document.getElementById('new-org-name')?.value.trim();
   const email = document.getElementById('new-org-email')?.value.trim();
-  const plan  = document.getElementById('new-org-plan')?.value || 'free';
+  const plan  = document.getElementById('new-org-plan')?.value || 'pro';
   const errEl = document.getElementById('admin-org-error');
-
   errEl.classList.remove('show');
-  if (!name)  { errEl.textContent='El nombre es obligatorio.';  errEl.classList.add('show'); return; }
-  if (!email) { errEl.textContent='El email es obligatorio.';   errEl.classList.add('show'); return; }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    errEl.textContent='Email no válido.'; errEl.classList.add('show'); return;
-  }
-
-  const btn = document.querySelector('#app-content .btn-primary');
+  if (!name)  { errEl.textContent='El nombre es obligatorio.'; errEl.classList.add('show'); return; }
+  if (!email) { errEl.textContent='El email es obligatorio.';  errEl.classList.add('show'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errEl.textContent='Email no válido.'; errEl.classList.add('show'); return; }
+  const btn = document.getElementById('create-org-btn');
   if (btn) { btn.disabled=true; btn.textContent='Creando...'; }
-
   try {
-    // Crear organización
-    const {data: org, error: orgErr} = await sb.from('organizations')
-      .insert({ name, plan, created_by: currentUser.id })
-      .select().single();
+    const {data: org, error: orgErr} = await sb.from('organizations').insert({ name, plan, created_by: currentUser.id }).select().single();
     if (orgErr) throw orgErr;
-
-    // Crear invitación pendiente
-    const {error: invErr} = await sb.from('pending_invites').insert({
-      email,
-      organization_id: org.id,
-      role: 'owner',
-      invited_by: currentUser.id
-    });
+    const {error: invErr} = await sb.from('pending_invites').insert({ email, organization_id: org.id, role: 'owner', invited_by: currentUser.id });
     if (invErr) throw invErr;
-
-    // Actualizar lista local y limpiar form
-    allOrgs.unshift({ ...org });
-    document.getElementById('new-org-name').value  = '';
-    document.getElementById('new-org-email').value = '';
-
-    // Mostrar instrucciones
-    document.getElementById('instr-email').textContent = email;
-    document.getElementById('admin-instructions').style.display = 'block';
-
-    render();
-    toast('Empresa creada. Ahora crea la cuenta en Supabase Auth.', 'success');
+    allOrgs.unshift({...org});
+    closeModal();
+    renderAdminOrgsList();
+    toast(`✓ Empresa "${name}" creada. Ahora crea el usuario en Supabase Auth con el email: ${email}`, 'success');
+    setTimeout(()=>{ navigator.clipboard.writeText(email); toast('Email copiado al portapapeles.'); }, 500);
   } catch(e) {
-    const msg = e.message?.includes('duplicate') || e.message?.includes('unique')
-      ? 'Ya existe una invitación para ese email.'
-      : (e.message || 'Error al crear la empresa.');
-    errEl.textContent = msg;
-    errEl.classList.add('show');
-  } finally {
-    if (btn) { btn.disabled=false; btn.textContent='Crear empresa y preparar acceso →'; }
+    const msg = e.message?.includes('duplicate')||e.message?.includes('unique') ? 'Ya existe una invitación para ese email.' : (e.message||'Error al crear la empresa.');
+    errEl.textContent=msg; errEl.classList.add('show');
+    if (btn) { btn.disabled=false; btn.textContent='Crear empresa →'; }
   }
 }
 
-async function deleteOrg(orgId, orgName) {
-  if (!confirm(`¿Eliminar la empresa "${orgName}"? Se borrarán también sus datos (clientes, facturas). Esta acción no se puede deshacer.`)) return;
+function confirmDeleteOrg(orgId, orgName) {
+  document.getElementById('modal-container').innerHTML = `
+  <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal" style="max-width:400px">
+      <div class="modal-header" style="border-bottom-color:var(--red-border)">
+        <span class="modal-title" style="color:var(--red)">⚠ Eliminar empresa</span>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:.88rem;margin-bottom:1rem">Vas a eliminar <strong>${orgName}</strong> y todos sus datos (clientes, facturas, gastos). Esta acción es <strong>irreversible</strong>.</p>
+        <div class="form-group">
+          <label class="form-label">Introduce tu PIN de seguridad para confirmar</label>
+          <input class="form-input" id="delete-pin" type="password" placeholder="••••" maxlength="10" style="letter-spacing:.3em;font-size:1.1rem;text-align:center"/>
+        </div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:.3rem;text-align:center">El PIN lo configuraste en el código de la app.</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+        <button class="btn" style="background:var(--red);color:#fff;border-color:var(--red)" onclick="executeDeleteOrg('${orgId}','${orgName.replace(/'/g,"\\'")}')">Eliminar definitivamente</button>
+      </div>
+    </div>
+  </div>`;
+  setTimeout(()=>document.getElementById('delete-pin')?.focus(), 100);
+}
+
+async function executeDeleteOrg(orgId, orgName) {
+  const pin = document.getElementById('delete-pin')?.value;
+  if (pin !== ADMIN_PIN) { toast('PIN incorrecto.', 'error'); document.getElementById('delete-pin').value=''; document.getElementById('delete-pin').focus(); return; }
+  closeModal();
   try {
+    await sb.from('expenses').delete().eq('organization_id', orgId);
     await sb.from('pending_invites').delete().eq('organization_id', orgId);
     await sb.from('memberships').delete().eq('organization_id', orgId);
     await sb.from('clients').delete().eq('organization_id', orgId);
@@ -1798,8 +1780,8 @@ async function deleteOrg(orgId, orgName) {
     await sb.from('organizations').delete().eq('id', orgId);
     allOrgs = allOrgs.filter(o=>o.id!==orgId);
     if (currentOrgId === orgId) { currentOrgId=null; currentOrgName=''; }
-    render();
-    toast('Empresa eliminada.', 'success');
+    renderAdminOrgsList();
+    toast(`Empresa "${orgName}" eliminada.`, 'success');
   } catch(e) { toast('Error al eliminar: ' + e.message, 'error'); }
 }
 
@@ -1812,8 +1794,9 @@ async function refreshAdminOrgs() {
 async function switchAdminToOrg(orgId, orgName) {
   if (!orgId) {
     currentOrgId=null; currentOrgName='';
-    DB = { clients:[], invoices:[], settings:{...DEFAULT_SETTINGS} };
+    DB = { clients:[], invoices:[], expenses:[], settings:{...DEFAULT_SETTINGS} };
     document.getElementById('sidebar-org-badge').style.display='none';
+    adminOrgsLoaded = false;
     navigate('admin');
     return;
   }
@@ -1826,7 +1809,6 @@ async function switchAdminToOrg(orgId, orgName) {
   navigate('dashboard');
   toast('Viendo como: '+orgName);
 }
-
 
 
 // ════════════════════════════════════════════════════════════
